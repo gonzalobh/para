@@ -454,6 +454,14 @@
       padding: 0 6px;
       white-space: nowrap;
     }
+
+    .input-selection-highlight {
+      position: absolute;
+      background: rgba(11, 87, 208, 0.15);
+      border-radius: 8px;
+      pointer-events: none;
+      z-index: 1500;
+    }
   </style>
 </head>
 <body>
@@ -706,6 +714,7 @@
 
     let lastMouseX = 0;
     let lastMouseY = 0;
+    let inputHighlightEl = null;
 
     function setBrushLoading(isLoading, msg = "") {
       brushSimplifyBtn.disabled = isLoading;
@@ -716,6 +725,7 @@
     function hideStyleBrush() {
       styleBrushMenu.style.display = "none";
       setBrushLoading(false, "");
+      hideInputHighlight();
     }
 
     function showStyleBrush(x, y) {
@@ -736,9 +746,34 @@
       return { start, end, selected, full };
     }
 
-    async function applyStyle(effect) {
+    function showInputHighlight() {
       const sel = getSelectionData();
       if (!sel) return;
+
+      const rect = inputText.getBoundingClientRect();
+
+      if (!inputHighlightEl) {
+        inputHighlightEl = document.createElement("div");
+        inputHighlightEl.className = "input-selection-highlight";
+        document.body.appendChild(inputHighlightEl);
+      }
+
+      inputHighlightEl.style.left = rect.left + 12 + "px";
+      inputHighlightEl.style.top = rect.top + 12 + "px";
+      inputHighlightEl.style.width = rect.width - 24 + "px";
+      inputHighlightEl.style.height = "28px";
+      inputHighlightEl.style.display = "block";
+    }
+
+    function hideInputHighlight() {
+      if (inputHighlightEl) {
+        inputHighlightEl.style.display = "none";
+      }
+    }
+
+    async function applyStyle(effect) {
+      const sel = getSelectionData();
+      if (!sel || !currentResultText) return;
 
       setBrushLoading(true, "Aplicando…");
 
@@ -749,26 +784,26 @@
           body: JSON.stringify({
             effect,
             selectedText: sel.selected,
-            before: sel.full.slice(Math.max(0, sel.start - 500), sel.start),
-            after: sel.full.slice(sel.end, sel.end + 500)
+            fullText: currentResultText
           })
         });
 
         const data = await res.json();
         if (!data.replacement) throw new Error();
 
-        inputText.value =
-          sel.full.slice(0, sel.start) +
-          data.replacement +
-          sel.full.slice(sel.end);
+        currentResultText = currentResultText.replace(
+          sel.selected,
+          data.replacement
+        );
 
-        const cursor = sel.start + data.replacement.length;
-        inputText.setSelectionRange(cursor, cursor);
-        inputText.focus();
+        currentDiff = buildDiffData(currentOriginalText, currentResultText);
+        diffViewEnabled = false;
+        applyOutputView();
 
-        updateInputCount();
-        clearOutputState();
+        outputCharCount.textContent = `${currentResultText.length} caracteres`;
+
         hideStyleBrush();
+        hideInputHighlight();
 
       } catch {
         setBrushLoading(false, "Error");
@@ -786,7 +821,13 @@
       lastMouseY = e.clientY;
 
       const sel = getSelectionData();
-      if (!sel) return hideStyleBrush();
+      if (!sel) {
+        hideStyleBrush();
+        hideInputHighlight();
+        return;
+      }
+
+      showInputHighlight();
       showStyleBrush(lastMouseX, lastMouseY);
     });
 
