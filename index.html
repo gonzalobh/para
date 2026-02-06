@@ -434,36 +434,42 @@
       return closers.test(curr) || openers.test(prev) || apostropheLike.test(curr) || apostropheLike.test(prev);
     }
 
-    function renderTokens(tokens, mode) {
-      let html = "";
+function renderTokens(tokens, mode) {
+  let html = "";
 
-      tokens.forEach((token, i) => {
-        if (!token?.value) return;
+  tokens.forEach((token, i) => {
+    if (!token?.value) return;
 
-        const escaped = escapeHtml(token.value);
-        let wrapped = escaped;
+    const escaped = escapeHtml(token.value);
+    let wrapped = escaped;
 
-        if (mode === "simple" && token.type === "added") {
-          wrapped = `<span class="added">${escaped}</span>`;
-        }
-
-        if (mode === "diff") {
-          if (token.type === "added") {
-            wrapped = `<span class="diff-added">${escaped}</span>`;
-          } else if (token.type === "removed") {
-            wrapped = `<span class="diff-removed">${escaped}</span>`;
-          }
-        }
-
-        if (i > 0 && !shouldJoinWithoutSpace(tokens[i - 1].value, token.value)) {
-          html += " ";
-        }
-
-        html += wrapped;
-      });
-
-      return html;
+    if (mode === "simple") {
+      // SI ES MODO SIMPLE: Solo mostramos lo que es 'equal' o 'added'.
+      // Ignoramos lo 'removed' para que no se vea el texto duplicado.
+      if (token.type === "removed") return; 
+      
+      if (token.type === "added") {
+        wrapped = `<span class="added">${escaped}</span>`;
+      }
+    } else if (mode === "diff") {
+      // SI ES MODO DIFERENCIA (Ver cambios activado): Mostramos todo.
+      if (token.type === "added") {
+        wrapped = `<span class="diff-added">${escaped}</span>`;
+      } else if (token.type === "removed") {
+        wrapped = `<span class="diff-removed">${escaped}</span>`;
+      }
     }
+
+    // Manejo de espacios inteligentes
+    if (html.length > 0 && !shouldJoinWithoutSpace(tokens[i - 1]?.value, token.value)) {
+      html += " ";
+    }
+
+    html += wrapped;
+  });
+
+  return html;
+}
 
     function buildDiffData(originalText, paraphrasedText) {
       const origTokens = tokenize(originalText).filter(t => !/^\s+$/.test(t));
