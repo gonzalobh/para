@@ -42,7 +42,16 @@ export default async function handler(req, res) {
       Simplify: "Simplifica el texto usando lenguaje sencillo.",
       Creative: "Parafrasea el texto de forma creativa.",
       Academic: "Parafrasea el texto con estilo académico.",
-      Shorten: "Parafrasea el texto haciéndolo más corto.",
+      Shorten: `Parafrasea el texto de forma más breve.
+Reglas obligatorias para este modo:
+- El resultado DEBE tener MENOS caracteres que el texto original.
+- Objetivo de reducción: entre 20% y 40% de caracteres.
+- PROHIBIDO agregar información nueva.
+- PROHIBIDO agregar contexto adicional.
+- PROHIBIDO explicar o expandir ideas.
+- PRIORIDAD: eliminar redundancias y condensar frases.
+- Mantén hechos, nombres y datos exactamente.
+- Si no puedes acortarlo sin perder sentido, reduce mínimamente.`,
       Expand: "Parafrasea el texto ampliándolo.",
       Rephraser: "Reformula el texto usando estructuras distintas.",
       Custom: customInstruction || "Parafrasea el texto."
@@ -102,8 +111,11 @@ REGLAS:
     const decoder = new TextDecoder();
     let buffer = "";
     let collectedText = "";
+    const originalText = text;
+    const isShortenMode = mode === "Shorten";
+    let reachedDoneMarker = false;
 
-    while (true) {
+    streamLoop: while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
@@ -118,9 +130,8 @@ REGLAS:
         const data = trimmed.replace(/^data:\s*/, "");
 
         if (data === "[DONE]") {
-          writeEvent({ type: "done" });
-          closeStream();
-          return;
+          reachedDoneMarker = true;
+          break streamLoop;
         }
 
         try {
@@ -129,7 +140,9 @@ REGLAS:
 
           if (chunk) {
             collectedText += chunk;
-            writeEvent({ type: "chunk", text: chunk });
+            if (!isShortenMode) {
+              writeEvent({ type: "chunk", text: chunk });
+            }
           }
         } catch (parseError) {
           console.error("Error parsing stream chunk", parseError);
@@ -137,8 +150,27 @@ REGLAS:
       }
     }
 
+    if (!reachedDoneMarker) {
+      buffer += decoder.decode();
+    }
+
     if (!collectedText.trim()) {
       writeEvent({ type: "error", message: "No se pudo generar el texto. Intenta nuevamente." });
+      writeEvent({ type: "done" });
+      return;
+    }
+
+    if (isShortenMode) {
+      if (collectedText.length >= originalText.length) {
+        writeEvent({
+          type: "error",
+          message: "No fue posible acortar el texto sin perder sentido. Intenta otro modo."
+        });
+        writeEvent({ type: "done" });
+        return;
+      }
+
+      writeEvent({ type: "chunk", text: collectedText });
     }
 
     writeEvent({ type: "done" });
