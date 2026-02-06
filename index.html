@@ -32,7 +32,7 @@
       padding: 28px;
       border-radius: 24px;
       border: 1px solid #f0f0f0;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.04);
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
     }
 
     h1 {
@@ -49,7 +49,39 @@
       font-size: 14px;
     }
 
-    /* MODES */
+    .tabs {
+      display: inline-flex;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 12px;
+      background: #f5f5f5;
+      margin-bottom: 14px;
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      color: #666;
+      border-radius: 10px;
+      font-size: 13px;
+      padding: 7px 12px;
+      cursor: pointer;
+    }
+
+    .tab-btn.active {
+      background: #fff;
+      color: #111;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
     .modes {
       display: flex;
       flex-wrap: wrap;
@@ -73,10 +105,9 @@
     .modes button.active {
       background: #fff;
       color: #111;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
 
-    /* EDITOR */
     .editor {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -102,7 +133,8 @@
       color: #111;
     }
 
-    textarea:focus {
+    textarea:focus,
+    .output:focus {
       outline: none;
       border-color: #111;
     }
@@ -113,7 +145,7 @@
 
     .output {
       white-space: pre-wrap;
-      color: rgba(0, 0, 0, 0.6);
+      color: rgba(0, 0, 0, 0.78);
     }
 
     .output:empty::before {
@@ -124,7 +156,75 @@
     .added {
       color: #15c;
       font-weight: 500;
-      opacity: 1;
+    }
+
+    .diff-added {
+      color: #0b57d0;
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-decoration-color: rgba(11, 87, 208, 0.65);
+      font-weight: 500;
+    }
+
+    .diff-removed {
+      color: #c62828;
+      text-decoration: line-through;
+      text-decoration-thickness: 2px;
+      text-decoration-color: rgba(198, 40, 40, 0.75);
+      opacity: 0.8;
+    }
+
+    .skeleton {
+      display: grid;
+      gap: 10px;
+      padding: 4px 0;
+    }
+
+    .skeleton-line {
+      height: 14px;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #efefef 25%, #f9f9f9 50%, #efefef 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+
+    .skeleton-line:nth-child(1) { width: 96%; }
+    .skeleton-line:nth-child(2) { width: 88%; }
+    .skeleton-line:nth-child(3) { width: 92%; }
+    .skeleton-line:nth-child(4) { width: 76%; }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .secondary-action {
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .secondary-btn {
+      border: 1px solid #ddd;
+      background: #fff;
+      color: #333;
+      border-radius: 999px;
+      font-size: 13px;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+
+    .secondary-btn.active {
+      border-color: #0b57d0;
+      color: #0b57d0;
+      background: #f4f8ff;
+    }
+
+    .status-label {
+      font-size: 12px;
+      color: #8b8b8b;
+      line-height: 1.4;
     }
 
     .meta {
@@ -146,13 +246,46 @@
       border-radius: 999px;
       padding: 6px 10px;
       font-size: 12px;
-      background: rgba(255,255,255,0.9);
+      background: rgba(255, 255, 255, 0.9);
       color: #444;
       cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
-    /* CONTROLS */
+    .history-list {
+      margin: 6px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+
+    .history-item {
+      border: 1px solid #ededed;
+      border-radius: 12px;
+      background: #fff;
+      padding: 12px;
+      cursor: pointer;
+    }
+
+    .history-item:hover {
+      border-color: #d9d9d9;
+      background: #fcfcfc;
+    }
+
+    .history-item-title {
+      margin: 0;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .history-item-text {
+      margin: 6px 0 0;
+      font-size: 14px;
+      color: #111;
+      line-height: 1.5;
+    }
+
     .controls {
       display: flex;
       justify-content: space-between;
@@ -196,82 +329,101 @@
   </style>
 </head>
 <body>
-
   <div class="page">
+    <div class="container">
+      <h1>para</h1>
+      <p class="subtitle">transform your text</p>
 
-  <div class="container">
-    <h1>para</h1>
-    <p class="subtitle">transform your text</p>
-
-    <!-- MODES -->
-    <div class="modes">
-      <button data-mode="Standard" class="active">Estándar</button>
-      <button data-mode="Fluency">Fluidez</button>
-      <button data-mode="Humanizer">Humanizar</button>
-      <button data-mode="Simplify">Simplificar</button>
-      <button data-mode="Creative">Creativo</button>
-      <button data-mode="Academic">Académico</button>
-      <button data-mode="Shorten">Acortar</button>
-      <button data-mode="Expand">Expandir</button>
-      <button data-mode="Rephraser">Reformular</button>
-      <button data-mode="Custom">Personalizado</button>
-    </div>
-
-    <!-- TEXT AREAS -->
-    <div class="editor">
-      <div>
-        <textarea
-          id="inputText"
-          placeholder="Ingresa el texto que quieres parafrasear..."
-        ></textarea>
-        <div id="inputCharCount" class="meta">0 caracteres</div>
+      <div class="tabs" role="tablist" aria-label="Secciones">
+        <button class="tab-btn active" type="button" data-tab="editorPanel">Editor</button>
+        <button class="tab-btn" type="button" data-tab="historyPanel">Historial</button>
       </div>
 
-      <div class="output-panel">
-        <div
-          id="outputText"
-          class="output"
-          data-placeholder="Aquí aparecerá el texto parafraseado"
-        ></div>
-        <div id="outputCharCount" class="meta"></div>
-        <div id="similarityText" class="meta"></div>
-        <button id="copyOutput" class="copy-btn" type="button" aria-label="Copiar salida">Copy</button>
+      <div id="editorPanel" class="tab-panel active">
+        <div class="modes">
+          <button data-mode="Standard" class="active">Estándar</button>
+          <button data-mode="Fluency">Fluidez</button>
+          <button data-mode="Humanizer">Humanizar</button>
+          <button data-mode="Simplify">Simplificar</button>
+          <button data-mode="Creative">Creativo</button>
+          <button data-mode="Academic">Académico</button>
+          <button data-mode="Shorten">Acortar</button>
+          <button data-mode="Expand">Expandir</button>
+          <button data-mode="Rephraser">Reformular</button>
+          <button data-mode="Custom">Personalizado</button>
+        </div>
+
+        <div class="editor">
+          <div>
+            <textarea id="inputText" placeholder="Ingresa el texto que quieres parafrasear..."></textarea>
+            <div id="inputCharCount" class="meta">0 caracteres</div>
+          </div>
+
+          <div class="output-panel">
+            <div
+              id="outputText"
+              class="output"
+              data-placeholder="Aquí aparecerá el texto parafraseado"
+              contenteditable="true"
+            ></div>
+            <div class="secondary-action">
+              <button id="toggleChanges" type="button" class="secondary-btn" disabled>Ver cambios</button>
+              <span id="toggleStatus" class="status-label"></span>
+            </div>
+            <div id="outputCharCount" class="meta"></div>
+            <div id="similarityText" class="meta"></div>
+            <button id="copyOutput" class="copy-btn" type="button" aria-label="Copiar salida">Copy</button>
+          </div>
+        </div>
+
+        <div class="controls">
+          <div>
+            <label for="tone">Tono:</label><br />
+            <select id="tone">
+              <option value="Formal">Formal</option>
+              <option value="Casual">Casual</option>
+              <option value="Professional">Professional</option>
+              <option value="Witty">Witty</option>
+            </select>
+          </div>
+
+          <button id="paraphrase">Parafrasear</button>
+        </div>
+      </div>
+
+      <div id="historyPanel" class="tab-panel" aria-live="polite">
+        <p class="subtitle" style="margin-bottom:8px;">Últimas 10 paráfrasis guardadas localmente</p>
+        <ul id="historyList" class="history-list"></ul>
       </div>
     </div>
-
-    <!-- CONTROLS -->
-    <div class="controls">
-      <div>
-        <label for="tone">Tono:</label><br />
-        <select id="tone">
-          <option value="Formal">Formal</option>
-          <option value="Casual">Casual</option>
-          <option value="Professional">Professional</option>
-          <option value="Witty">Witty</option>
-        </select>
-      </div>
-
-      <button id="paraphrase">Parafrasear</button>
-    </div>
-  </div>
   </div>
 
   <script>
     let currentMode = "Standard";
-
     const DIFF_TOKEN_LIMIT = 4000;
+    const HISTORY_KEY = "para.history.v1";
+    const HISTORY_MAX_ITEMS = 10;
+
+    let diffViewEnabled = false;
+    let diffButtonBlocked = true;
+    let isManualEdited = false;
+    let isProgrammaticUpdate = false;
+    let hasReceivedFirstChunk = false;
+    let currentOriginalText = "";
+    let currentResultText = "";
+    let currentDiff = null;
 
     function escapeHtml(str) {
       return str
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
+        .replace(/\"/g, "&quot;")
         .replace(/'/g, "&#39;");
     }
 
     function tokenize(text) {
-      return (text.match(/\p{L}[\p{L}\p{N}_'-]*|\p{N}+|[^\s\p{L}\p{N}]|\s+/gu) || []);
+      return text.match(/\p{L}[\p{L}\p{N}_'-]*|\p{N}+|[^\s\p{L}\p{N}]|\s+/gu) || [];
     }
 
     function shouldJoinWithoutSpace(prev, curr) {
@@ -285,19 +437,28 @@
       return closers.test(curr) || openers.test(prev) || apostropheLike.test(curr) || apostropheLike.test(prev);
     }
 
-    function renderTokens(tokens) {
+    function renderTokens(tokens, mode) {
       let html = "";
 
       tokens.forEach((token, i) => {
-        const raw = token.value;
-        if (!raw) return;
+        if (!token?.value) return;
 
-        const escaped = escapeHtml(raw);
-        const wrapped = token.added
-          ? `<span class="added">${escaped}</span>`
-          : escaped;
+        const escaped = escapeHtml(token.value);
+        let wrapped = escaped;
 
-        if (i > 0 && !shouldJoinWithoutSpace(tokens[i - 1].value, raw)) {
+        if (mode === "simple" && token.type === "added") {
+          wrapped = `<span class="added">${escaped}</span>`;
+        }
+
+        if (mode === "diff") {
+          if (token.type === "added") {
+            wrapped = `<span class="diff-added">${escaped}</span>`;
+          } else if (token.type === "removed") {
+            wrapped = `<span class="diff-removed">${escaped}</span>`;
+          }
+        }
+
+        if (i > 0 && !shouldJoinWithoutSpace(tokens[i - 1].value, token.value)) {
           html += " ";
         }
 
@@ -307,19 +468,19 @@
       return html;
     }
 
-    function highlightAddedWords(originalText, paraphrasedText) {
+    function buildDiffData(originalText, paraphrasedText) {
       const origTokens = tokenize(originalText).filter(t => !/^\s+$/.test(t));
       const outTokens = tokenize(paraphrasedText).filter(t => !/^\s+$/.test(t));
 
       if (!outTokens.length) {
-        return { html: "", addedCount: 0, totalCount: 0, diffDisabled: false };
+        return { tokens: [], addedCount: 0, totalCount: 0, diffDisabled: false };
       }
 
       if (origTokens.length + outTokens.length > DIFF_TOKEN_LIMIT) {
         return {
-          html: escapeHtml(paraphrasedText),
+          tokens: outTokens.map(token => ({ value: token, type: "equal" })),
           addedCount: 0,
-          totalCount: 0,
+          totalCount: outTokens.length,
           diffDisabled: true
         };
       }
@@ -338,40 +499,42 @@
         }
       }
 
-      const rendered = [];
+      const tokens = [];
       let i = 0;
       let j = 0;
 
       while (i < n && j < m) {
         if (origTokens[i] === outTokens[j]) {
-          rendered.push({ value: outTokens[j], added: false });
+          tokens.push({ value: outTokens[j], type: "equal" });
           i++;
           j++;
         } else if (dp[i][j + 1] >= dp[i + 1][j]) {
-          rendered.push({ value: outTokens[j], added: true });
+          tokens.push({ value: outTokens[j], type: "added" });
           j++;
         } else {
+          tokens.push({ value: origTokens[i], type: "removed" });
           i++;
         }
       }
 
+      while (i < n) {
+        tokens.push({ value: origTokens[i], type: "removed" });
+        i++;
+      }
+
       while (j < m) {
-        rendered.push({ value: outTokens[j], added: true });
+        tokens.push({ value: outTokens[j], type: "added" });
         j++;
       }
 
-      const addedCount = rendered.filter(token => token.added).length;
-      const totalCount = rendered.length;
+      const addedCount = tokens.filter(token => token.type === "added").length;
+      const totalCount = tokens.filter(token => token.type !== "removed").length;
 
-      return {
-        html: renderTokens(rendered),
-        addedCount,
-        totalCount,
-        diffDisabled: false
-      };
+      return { tokens, addedCount, totalCount, diffDisabled: false };
     }
 
     const modeButtons = document.querySelectorAll(".modes button");
+    const tabButtons = document.querySelectorAll(".tab-btn");
     const input = document.getElementById("inputText");
     const output = document.getElementById("outputText");
     const tone = document.getElementById("tone");
@@ -380,6 +543,9 @@
     const inputCharCount = document.getElementById("inputCharCount");
     const outputCharCount = document.getElementById("outputCharCount");
     const similarityText = document.getElementById("similarityText");
+    const toggleChanges = document.getElementById("toggleChanges");
+    const toggleStatus = document.getElementById("toggleStatus");
+    const historyList = document.getElementById("historyList");
 
     function setParaphraseLabel(isLoading) {
       btn.textContent = isLoading ? "Parafraseando…" : "Parafrasear";
@@ -391,19 +557,168 @@
       return "Reescritura profunda";
     }
 
+    function setOutputHtml(html) {
+      isProgrammaticUpdate = true;
+      output.innerHTML = html;
+      isProgrammaticUpdate = false;
+    }
+
+    function disableDiffButton(message = "") {
+      diffButtonBlocked = true;
+      diffViewEnabled = false;
+      toggleChanges.classList.remove("active");
+      toggleChanges.setAttribute("aria-pressed", "false");
+      toggleChanges.disabled = true;
+      toggleStatus.textContent = message;
+    }
+
+    function enableDiffButton(message = "") {
+      diffButtonBlocked = false;
+      toggleChanges.disabled = false;
+      toggleStatus.textContent = message;
+    }
+
+    function applyOutputView() {
+      if (!currentDiff) {
+        setOutputHtml(escapeHtml(currentResultText));
+        return;
+      }
+
+      const mode = diffViewEnabled ? "diff" : "simple";
+      setOutputHtml(renderTokens(currentDiff.tokens, mode));
+      toggleChanges.classList.toggle("active", diffViewEnabled);
+      toggleChanges.setAttribute("aria-pressed", diffViewEnabled ? "true" : "false");
+    }
+
     function updateInputCount() {
       inputCharCount.textContent = `${input.value.length} caracteres`;
     }
 
+    function setActiveMode(mode) {
+      currentMode = mode;
+      modeButtons.forEach(button => button.classList.toggle("active", button.dataset.mode === mode));
+    }
+
+    function saveHistoryEntry(entry) {
+      const items = loadHistory();
+      items.unshift(entry);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, HISTORY_MAX_ITEMS)));
+      renderHistory();
+    }
+
+    function loadHistory() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function formatTimestamp(value) {
+      return new Date(value).toLocaleString("es-ES", {
+        dateStyle: "short",
+        timeStyle: "short"
+      });
+    }
+
+    function renderHistory() {
+      const items = loadHistory();
+      historyList.innerHTML = "";
+
+      if (!items.length) {
+        historyList.innerHTML = '<li class="history-item" style="cursor:default;"><p class="history-item-title">Aún no hay historial</p><p class="history-item-text">Las paráfrasis recientes aparecerán aquí.</p></li>';
+        return;
+      }
+
+      items.forEach((item, index) => {
+        const li = document.createElement("li");
+        li.className = "history-item";
+        li.innerHTML = `
+          <p class="history-item-title">${escapeHtml(formatTimestamp(item.timestamp))} · ${escapeHtml(item.mode)} · ${escapeHtml(item.tone)}</p>
+          <p class="history-item-text">${escapeHtml(item.result.slice(0, 160))}${item.result.length > 160 ? "…" : ""}</p>
+        `;
+
+        li.addEventListener("click", () => {
+          input.value = item.original;
+          updateInputCount();
+          tone.value = item.tone;
+          setActiveMode(item.mode);
+
+          currentOriginalText = item.original;
+          currentResultText = item.result;
+          currentDiff = buildDiffData(currentOriginalText, currentResultText);
+
+          isManualEdited = false;
+          diffViewEnabled = false;
+          applyOutputView();
+
+          if (currentDiff.diffDisabled) {
+            disableDiffButton("Cambios no disponibles por longitud del texto");
+          } else {
+            enableDiffButton("");
+          }
+
+          outputCharCount.textContent = `${item.result.length} caracteres`;
+          const similarity = currentDiff.totalCount
+            ? Math.round(100 - (currentDiff.addedCount / currentDiff.totalCount) * 100)
+            : 100;
+          similarityText.textContent = getSimilarityLabel(similarity);
+
+          tabButtons.forEach(button => button.classList.toggle("active", button.dataset.tab === "editorPanel"));
+          document.getElementById("editorPanel").classList.add("active");
+          document.getElementById("historyPanel").classList.remove("active");
+        });
+
+        historyList.appendChild(li);
+      });
+    }
+
+    function showSkeleton() {
+      const html = `
+        <div class="skeleton" aria-hidden="true">
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+        </div>
+      `;
+      setOutputHtml(html);
+    }
+
     updateInputCount();
+    renderHistory();
+
     input.addEventListener("input", updateInputCount);
+
+    tabButtons.forEach(tabBtn => {
+      tabBtn.addEventListener("click", () => {
+        tabButtons.forEach(button => button.classList.toggle("active", button === tabBtn));
+        document.querySelectorAll(".tab-panel").forEach(panel => panel.classList.remove("active"));
+        document.getElementById(tabBtn.dataset.tab).classList.add("active");
+      });
+    });
 
     modeButtons.forEach(btnMode => {
       btnMode.addEventListener("click", () => {
-        currentMode = btnMode.dataset.mode;
-        modeButtons.forEach(b => b.classList.remove("active"));
-        btnMode.classList.add("active");
+        setActiveMode(btnMode.dataset.mode);
       });
+    });
+
+    toggleChanges.addEventListener("click", () => {
+      if (diffButtonBlocked || !currentDiff || isManualEdited) return;
+      diffViewEnabled = !diffViewEnabled;
+      applyOutputView();
+    });
+
+    output.addEventListener("input", () => {
+      if (isProgrammaticUpdate || !currentResultText) return;
+
+      isManualEdited = true;
+      diffViewEnabled = false;
+      disableDiffButton("Editado manualmente");
+      outputCharCount.textContent = `${output.textContent.length} caracteres`;
+      similarityText.textContent = "";
     });
 
     btn.addEventListener("click", async () => {
@@ -412,9 +727,16 @@
 
       btn.disabled = true;
       setParaphraseLabel(true);
-      output.innerHTML = "";
       outputCharCount.textContent = "";
       similarityText.textContent = "";
+
+      disableDiffButton("");
+      isManualEdited = false;
+      hasReceivedFirstChunk = false;
+      currentOriginalText = text;
+      currentResultText = "";
+      currentDiff = null;
+      showSkeleton();
 
       try {
         const res = await fetch("/api/summary", {
@@ -429,24 +751,89 @@
           })
         });
 
-        const data = await res.json();
-        if (data.result) {
-          const { html, addedCount, totalCount, diffDisabled } = highlightAddedWords(text, data.result);
-          output.innerHTML = html;
-
-          if (!diffDisabled) {
-            outputCharCount.textContent = `${data.result.length} caracteres`;
-            const similarity = totalCount
-              ? Math.round(100 - (addedCount / totalCount) * 100)
-              : 100;
-            similarityText.textContent = getSimilarityLabel(similarity);
+        if (!res.ok || !res.body) {
+          if (res.status === 413) {
+            throw new Error("El texto es demasiado largo, intenta con un párrafo más corto.");
           }
-        } else {
-          output.textContent = "No se pudo generar el texto.";
+          throw new Error("No se pudo generar el texto. Intenta nuevamente.");
         }
 
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split("\n\n");
+          buffer = events.pop() || "";
+
+          events.forEach(eventBlock => {
+            const line = eventBlock
+              .split("\n")
+              .find(lineItem => lineItem.startsWith("data:"));
+
+            if (!line) return;
+
+            const payloadText = line.replace(/^data:\s*/, "");
+            if (!payloadText || payloadText === "[DONE]") return;
+
+            try {
+              const payload = JSON.parse(payloadText);
+
+              if (payload.type === "chunk" && payload.text) {
+                currentResultText += payload.text;
+
+                if (!hasReceivedFirstChunk) {
+                  hasReceivedFirstChunk = true;
+                }
+
+                setOutputHtml(escapeHtml(currentResultText));
+                outputCharCount.textContent = `${currentResultText.length} caracteres`;
+              }
+
+              if (payload.type === "error") {
+                throw new Error(payload.message || "No se pudo generar el texto. Intenta nuevamente.");
+              }
+            } catch (error) {
+              throw error;
+            }
+          });
+        }
+
+        if (!currentResultText.trim()) {
+          throw new Error("No se pudo generar el texto. Intenta nuevamente.");
+        }
+
+        currentDiff = buildDiffData(currentOriginalText, currentResultText);
+        diffViewEnabled = false;
+        applyOutputView();
+
+        if (currentDiff.diffDisabled) {
+          disableDiffButton("Cambios no disponibles por longitud del texto");
+        } else {
+          enableDiffButton("");
+        }
+
+        const similarity = currentDiff.totalCount
+          ? Math.round(100 - (currentDiff.addedCount / currentDiff.totalCount) * 100)
+          : 100;
+        similarityText.textContent = getSimilarityLabel(similarity);
+
+        saveHistoryEntry({
+          original: currentOriginalText,
+          result: currentResultText,
+          mode: currentMode,
+          tone: tone.value,
+          timestamp: Date.now()
+        });
       } catch (err) {
-        output.textContent = "Error al generar el texto.";
+        const message = err?.message === "El texto es demasiado largo, intenta con un párrafo más corto."
+          ? err.message
+          : "No se pudo generar el texto. Intenta nuevamente.";
+        setOutputHtml(escapeHtml(message));
         outputCharCount.textContent = "";
         similarityText.textContent = "";
       }
@@ -465,7 +852,7 @@
         setTimeout(() => {
           copyBtn.textContent = "Copy";
         }, 1200);
-      } catch (err) {
+      } catch {
         copyBtn.textContent = "Error";
         setTimeout(() => {
           copyBtn.textContent = "Copy";
@@ -473,6 +860,5 @@
       }
     });
   </script>
-
 </body>
 </html>

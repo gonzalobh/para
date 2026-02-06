@@ -9,10 +9,14 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { text, mode, tone, customInstruction } = req.body;
+    const { text, mode, tone, customInstruction } = req.body || {};
 
-    if (!text) {
+    if (!text || !text.trim()) {
       return res.status(400).json({ error: "Texto vacío" });
+    }
+
+    if (text.length > 16000) {
+      return res.status(413).json({ error: "Texto demasiado largo" });
     }
 
     const MODE_PROMPTS = {
@@ -48,7 +52,7 @@ REGLAS:
 - Devuelve SOLO texto plano parafraseado (sin etiquetas HTML).
 `;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const upstreamResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -56,6 +60,7 @@ REGLAS:
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
+        stream: true,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: text }
@@ -64,18 +69,74 @@ REGLAS:
       }),
     });
 
-    const data = await response.json();
-    const paraphrasedText = data?.choices?.[0]?.message?.content?.trim();
-
-    if (!paraphrasedText) {
+    if (!upstreamResponse.ok || !upstreamResponse.body) {
+      const errorText = await upstreamResponse.text();
+      console.error("OpenAI upstream error:", errorText);
       return res.status(502).json({ error: "No se pudo generar el texto" });
     }
 
-    res.status(200).json({
-      result: paraphrasedText,
-    });
+    res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+
+    const reader = upstreamResponse.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+    let collectedText = "";
+
+    const writeEvent = (payload) => {
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    };
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() || "";
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed.startsWith("data:")) continue;
+
+        const data = trimmed.replace(/^data:\s*/, "");
+
+        if (data === "[DONE]") {
+          writeEvent({ type: "done" });
+          res.end();
+          return;
+        }
+
+        try {
+          const parsed = JSON.parse(data);
+          const chunk = parsed?.choices?.[0]?.delta?.content || "";
+
+          if (chunk) {
+            collectedText += chunk;
+            writeEvent({ type: "chunk", text: chunk });
+          }
+        } catch (parseError) {
+          console.error("Error parsing stream chunk", parseError);
+        }
+      }
+    }
+
+    if (!collectedText.trim()) {
+      writeEvent({ type: "error", message: "No se pudo generar el texto. Intenta nuevamente." });
+    } else {
+      writeEvent({ type: "done" });
+    }
+
+    res.end();
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Error interno" });
+
+    if (!res.headersSent) {
+      return res.status(500).json({ error: "Error interno" });
+    }
+
+    res.write(`data: ${JSON.stringify({ type: "error", message: "No se pudo generar el texto. Intenta nuevamente." })}\n\n`);
+    res.end();
   }
 }
