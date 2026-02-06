@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>para — resumir texto</title>
+  <title>para — parafrasear texto</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
@@ -14,7 +14,7 @@
     }
 
     .container {
-      max-width: 700px;
+      max-width: 900px;
       margin: 0 auto;
       background: #fff;
       padding: 24px;
@@ -27,18 +27,67 @@
       font-size: 24px;
     }
 
+    /* MODES */
+    .modes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .modes button {
+      padding: 6px 12px;
+      font-size: 14px;
+      border-radius: 20px;
+      border: 1px solid #ddd;
+      background: #fff;
+      cursor: pointer;
+    }
+
+    .modes button.active {
+      background: #000;
+      color: #fff;
+      border-color: #000;
+    }
+
+    /* EDITOR */
+    .editor {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
     textarea {
       width: 100%;
-      min-height: 180px;
+      min-height: 220px;
       padding: 12px;
-      font-size: 16px;
+      font-size: 15px;
       border-radius: 8px;
       border: 1px solid #ddd;
       resize: vertical;
     }
 
-    button {
+    textarea[readonly] {
+      background: #f5f5f5;
+    }
+
+    /* CONTROLS */
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
       margin-top: 16px;
+      gap: 16px;
+    }
+
+    select {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+    }
+
+    button#paraphrase {
       padding: 12px 18px;
       font-size: 16px;
       border: none;
@@ -53,12 +102,10 @@
       cursor: not-allowed;
     }
 
-    .result {
-      margin-top: 24px;
-      padding: 16px;
-      background: #f1f1f1;
-      border-radius: 8px;
-      white-space: pre-wrap;
+    @media (max-width: 768px) {
+      .editor {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
@@ -67,27 +114,74 @@
   <div class="container">
     <h1>para</h1>
 
-    <textarea id="inputText" placeholder="Pega aquí el texto que quieres resumir..."></textarea>
+    <!-- MODES -->
+    <div class="modes">
+      <button data-mode="Standard" class="active">Standard</button>
+      <button data-mode="Fluency">Fluency</button>
+      <button data-mode="Humanizer">Humanizer</button>
+      <button data-mode="Simplify">Simplify</button>
+      <button data-mode="Creative">Creative</button>
+      <button data-mode="Academic">Academic</button>
+      <button data-mode="Shorten">Shorten</button>
+      <button data-mode="Expand">Expand</button>
+      <button data-mode="Rephraser">Rephraser</button>
+      <button data-mode="Custom">Custom</button>
+    </div>
 
-    <button id="btn">Resumir</button>
+    <!-- TEXT AREAS -->
+    <div class="editor">
+      <textarea
+        id="inputText"
+        placeholder="Ingresa el texto que quieres parafrasear..."
+      ></textarea>
 
-    <div id="result" class="result" style="display:none;"></div>
+      <textarea
+        id="outputText"
+        placeholder="Aquí aparecerá el texto parafraseado"
+        readonly
+      ></textarea>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="controls">
+      <div>
+        <label for="tone">Tono:</label><br />
+        <select id="tone">
+          <option value="Formal">Formal</option>
+          <option value="Casual">Casual</option>
+          <option value="Professional">Professional</option>
+          <option value="Witty">Witty</option>
+        </select>
+      </div>
+
+      <button id="paraphrase">Parafrasear</button>
+    </div>
   </div>
 
   <script>
-    const btn = document.getElementById("btn");
+    let currentMode = "Standard";
+
+    const modeButtons = document.querySelectorAll(".modes button");
     const input = document.getElementById("inputText");
-    const result = document.getElementById("result");
+    const output = document.getElementById("outputText");
+    const tone = document.getElementById("tone");
+    const btn = document.getElementById("paraphrase");
+
+    modeButtons.forEach(btnMode => {
+      btnMode.addEventListener("click", () => {
+        currentMode = btnMode.dataset.mode;
+        modeButtons.forEach(b => b.classList.remove("active"));
+        btnMode.classList.add("active");
+      });
+    });
 
     btn.addEventListener("click", async () => {
       const text = input.value.trim();
       if (!text) return;
 
       btn.disabled = true;
-      btn.textContent = "Resumiendo…";
-
-      result.style.display = "none";
-      result.textContent = "";
+      btn.textContent = "Parafraseando…";
+      output.value = "";
 
       try {
         const res = await fetch("/api/summary", {
@@ -96,23 +190,21 @@
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            messages: [
-              { role: "user", content: text }
-            ]
+            text,
+            mode: currentMode,
+            tone: tone.value
           })
         });
 
         const data = await res.json();
-        result.textContent = data.message;
-        result.style.display = "block";
+        output.value = data.result || "No se pudo generar el texto.";
 
       } catch (err) {
-        result.textContent = "Error al generar el resumen.";
-        result.style.display = "block";
+        output.value = "Error al generar el texto.";
       }
 
       btn.disabled = false;
-      btn.textContent = "Resumir";
+      btn.textContent = "Parafrasear";
     });
   </script>
 
