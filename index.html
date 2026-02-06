@@ -26,7 +26,10 @@
     }
 
     .container {
-      max-width: 900px;
+      max-width: 1200px;
+      min-height: 80vh;
+      display: flex;
+      flex-direction: column;
       margin: 0 auto;
       background: #fff;
       padding: 28px;
@@ -82,6 +85,12 @@
       display: block;
     }
 
+    #editorPanel {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
     .modes {
       display: flex;
       flex-wrap: wrap;
@@ -111,21 +120,26 @@
     .editor {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 32px;
+      gap: 24px;
+      flex-grow: 1;
+      align-items: stretch;
+      flex: 1;
     }
 
     textarea,
     .output {
       width: 100%;
-      min-height: 220px;
+      min-height: 450px;
+      height: 100%;
       padding: 16px;
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
-      font-size: 16px;
+      font-size: 18px;
       line-height: 1.6;
       border-radius: 14px;
-      border: 1px solid transparent;
-      background: #fafafa;
+      border: 1px solid #e0e0e0;
+      background: #ffffff;
       box-sizing: border-box;
+      transition: all 0.2s ease;
     }
 
     textarea {
@@ -133,10 +147,63 @@
       color: #111;
     }
 
-    textarea:focus,
+    textarea:focus {
+      border-color: #0b57d0;
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(11, 87, 208, 0.05);
+      outline: none;
+    }
+
     .output:focus {
       outline: none;
       border-color: #111;
+    }
+
+    .drop-active textarea,
+    textarea.drop-active {
+      border-color: #0b57d0;
+      box-shadow: 0 0 0 4px rgba(11, 87, 208, 0.12);
+      background: #f8fbff;
+    }
+
+    .syn-word {
+      cursor: pointer;
+    }
+
+    .synonym-popover {
+      position: fixed;
+      z-index: 1000;
+      min-width: 180px;
+      max-width: 260px;
+      background: #fff;
+      border: 1px solid #eaeaea;
+      border-radius: 12px;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
+      padding: 8px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .synonym-popover button {
+      border: none;
+      border-radius: 8px;
+      background: #f7f7f7;
+      color: #333;
+      text-align: left;
+      padding: 8px 10px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .synonym-popover button:hover {
+      background: #eef4ff;
+    }
+
+    .synonym-loading,
+    .synonym-empty {
+      color: #666;
+      font-size: 13px;
+      padding: 6px 8px;
     }
 
     .output-panel {
@@ -292,6 +359,7 @@
       align-items: center;
       margin-top: 16px;
       gap: 16px;
+      flex-wrap: wrap;
     }
 
     select {
@@ -382,7 +450,11 @@
             </select>
           </div>
 
-          <button id="paraphrase">Parafrasear</button>
+          <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+            <button id="downloadPdf" type="button" class="secondary-btn" disabled>Descargar PDF</button>
+            <button id="downloadDocx" type="button" class="secondary-btn" disabled>Descargar Word</button>
+            <button id="paraphrase">Parafrasear</button>
+          </div>
         </div>
       </div>
 
@@ -393,12 +465,17 @@
     </div>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.11.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+
   <script>
     let currentMode = "Standard";
     const allowedModes = ["Standard", "Shorten", "Expand", "Simplify", "Creative"];
     const DIFF_TOKEN_LIMIT = 4000;
     const HISTORY_KEY = "para.history.v1";
     const HISTORY_MAX_ITEMS = 10;
+    const MAX_DROP_FILE_SIZE = 5 * 1024 * 1024;
 
     let diffViewEnabled = false;
     let diffButtonBlocked = true;
@@ -408,6 +485,10 @@
     let currentOriginalText = "";
     let currentResultText = "";
     let currentDiff = null;
+    let synonymPopover = null;
+    let synonymAnchor = null;
+    let synonymController = null;
+    const synonymCache = new Map();
 
     function escapeHtml(str) {
       if (typeof str !== "string") return "";
@@ -434,54 +515,63 @@
       return closers.test(curr) || openers.test(prev) || apostropheLike.test(curr) || apostropheLike.test(prev);
     }
 
-function renderTokens(tokens, mode) {
-  let html = "";
-
-  tokens.forEach((token, i) => {
-    if (!token?.value) return;
-
-    const escaped = escapeHtml(token.value);
-    let wrapped = escaped;
-
-    if (mode === "simple") {
-      // SI ES MODO SIMPLE: Solo mostramos lo que es 'equal' o 'added'.
-      // Ignoramos lo 'removed' para que no se vea el texto duplicado.
-      if (token.type === "removed") return; 
-      
-      if (token.type === "added") {
-        wrapped = `<span class="added">${escaped}</span>`;
-      }
-    } else if (mode === "diff") {
-      // SI ES MODO DIFERENCIA (Ver cambios activado): Mostramos todo.
-      if (token.type === "added") {
-        wrapped = `<span class="diff-added">${escaped}</span>`;
-      } else if (token.type === "removed") {
-        wrapped = `<span class="diff-removed">${escaped}</span>`;
-      }
+    function joinTokens(tokens) {
+      let text = "";
+      tokens.forEach((token, index) => {
+        if (!token) return;
+        if (text && !shouldJoinWithoutSpace(tokens[index - 1], token)) {
+          text += " ";
+        }
+        text += token;
+      });
+      return text;
     }
 
-    // Manejo de espacios inteligentes
-    if (html.length > 0 && !shouldJoinWithoutSpace(tokens[i - 1]?.value, token.value)) {
-      html += " ";
+    function renderTokens(tokens, mode) {
+      let html = "";
+      tokens.forEach((token, i) => {
+        if (!token?.value) return;
+
+        const escaped = escapeHtml(token.value);
+        let wrapped = escaped;
+
+        if (mode === "simple") {
+          if (token.type === "removed") return;
+          if (token.type === "added") {
+            const outIndexAttr = Number.isInteger(token.outIndex) ? ` data-out-index="${token.outIndex}"` : "";
+            wrapped = `<span class="added syn-word"${outIndexAttr} data-token="${escaped}">${escaped}</span>`;
+          }
+        } else if (mode === "diff") {
+          if (token.type === "added") {
+            const outIndexAttr = Number.isInteger(token.outIndex) ? ` data-out-index="${token.outIndex}"` : "";
+            wrapped = `<span class="diff-added syn-word"${outIndexAttr} data-token="${escaped}">${escaped}</span>`;
+          } else if (token.type === "removed") {
+            wrapped = `<span class="diff-removed">${escaped}</span>`;
+          }
+        }
+
+        if (html.length > 0 && !shouldJoinWithoutSpace(tokens[i - 1]?.value, token.value)) {
+          html += " ";
+        }
+
+        html += wrapped;
+      });
+
+      return html;
     }
-
-    html += wrapped;
-  });
-
-  return html;
-}
 
     function buildDiffData(originalText, paraphrasedText) {
       const origTokens = tokenize(originalText).filter(t => !/^\s+$/.test(t));
       const outTokens = tokenize(paraphrasedText).filter(t => !/^\s+$/.test(t));
 
       if (!outTokens.length) {
-        return { tokens: [], addedCount: 0, totalCount: 0, diffDisabled: false };
+        return { tokens: [], outTokens: [], addedCount: 0, totalCount: 0, diffDisabled: false };
       }
 
       if (origTokens.length + outTokens.length > DIFF_TOKEN_LIMIT) {
         return {
-          tokens: outTokens.map(token => ({ value: token, type: "equal" })),
+          tokens: outTokens.map((token, idx) => ({ value: token, type: "equal", outIndex: idx })),
+          outTokens,
           addedCount: 0,
           totalCount: outTokens.length,
           diffDisabled: true
@@ -508,11 +598,11 @@ function renderTokens(tokens, mode) {
 
       while (i < n && j < m) {
         if (origTokens[i] === outTokens[j]) {
-          tokens.push({ value: outTokens[j], type: "equal" });
+          tokens.push({ value: outTokens[j], type: "equal", outIndex: j });
           i++;
           j++;
         } else if (dp[i][j + 1] >= dp[i + 1][j]) {
-          tokens.push({ value: outTokens[j], type: "added" });
+          tokens.push({ value: outTokens[j], type: "added", outIndex: j });
           j++;
         } else {
           tokens.push({ value: origTokens[i], type: "removed" });
@@ -526,29 +616,38 @@ function renderTokens(tokens, mode) {
       }
 
       while (j < m) {
-        tokens.push({ value: outTokens[j], type: "added" });
+        tokens.push({ value: outTokens[j], type: "added", outIndex: j });
         j++;
       }
 
       const addedCount = tokens.filter(token => token.type === "added").length;
       const totalCount = tokens.filter(token => token.type !== "removed").length;
 
-      return { tokens, addedCount, totalCount, diffDisabled: false };
+      return { tokens, outTokens, addedCount, totalCount, diffDisabled: false };
     }
 
     const modeButtons = document.querySelectorAll(".modes button");
     const tabButtons = document.querySelectorAll(".tab-btn");
     const input = document.getElementById("inputText");
     const output = document.getElementById("outputText");
+    const editor = document.querySelector(".editor");
     const tone = document.getElementById("tone");
     const btn = document.getElementById("paraphrase");
     const copyBtn = document.getElementById("copyOutput");
+    const downloadPdfBtn = document.getElementById("downloadPdf");
+    const downloadDocxBtn = document.getElementById("downloadDocx");
     const inputCharCount = document.getElementById("inputCharCount");
     const outputCharCount = document.getElementById("outputCharCount");
     const similarityText = document.getElementById("similarityText");
     const toggleChanges = document.getElementById("toggleChanges");
     const toggleStatus = document.getElementById("toggleStatus");
     const historyList = document.getElementById("historyList");
+
+    function switchToEditorTab() {
+      tabButtons.forEach(button => button.classList.toggle("active", button.dataset.tab === "editorPanel"));
+      document.getElementById("editorPanel").classList.add("active");
+      document.getElementById("historyPanel").classList.remove("active");
+    }
 
     function setParaphraseLabel(isLoading) {
       btn.textContent = isLoading ? "Parafraseando…" : "Parafrasear";
@@ -564,6 +663,12 @@ function renderTokens(tokens, mode) {
       isProgrammaticUpdate = true;
       output.innerHTML = html;
       isProgrammaticUpdate = false;
+    }
+
+    function updateExportButtons() {
+      const hasOutput = Boolean(currentResultText.trim());
+      downloadPdfBtn.disabled = !hasOutput;
+      downloadDocxBtn.disabled = !hasOutput;
     }
 
     function disableDiffButton(message = "") {
@@ -584,13 +689,13 @@ function renderTokens(tokens, mode) {
     function applyOutputView() {
       if (!currentDiff) {
         setOutputHtml(escapeHtml(currentResultText));
-        return;
+      } else {
+        const mode = diffViewEnabled ? "diff" : "simple";
+        setOutputHtml(renderTokens(currentDiff.tokens, mode));
       }
-
-      const mode = diffViewEnabled ? "diff" : "simple";
-      setOutputHtml(renderTokens(currentDiff.tokens, mode));
       toggleChanges.classList.toggle("active", diffViewEnabled);
       toggleChanges.setAttribute("aria-pressed", diffViewEnabled ? "true" : "false");
+      updateExportButtons();
     }
 
     function updateInputCount() {
@@ -620,10 +725,7 @@ function renderTokens(tokens, mode) {
     }
 
     function formatTimestamp(value) {
-      return new Date(value).toLocaleString("es-ES", {
-        dateStyle: "short",
-        timeStyle: "short"
-      });
+      return new Date(value).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" });
     }
 
     function renderHistory() {
@@ -635,7 +737,7 @@ function renderTokens(tokens, mode) {
         return;
       }
 
-      items.forEach((item, index) => {
+      items.forEach((item) => {
         const safeResult = typeof item.result === "string" ? item.result : "";
         const safeMode = item.mode || "Standard";
         const safeTone = item.tone || "Formal";
@@ -673,10 +775,7 @@ function renderTokens(tokens, mode) {
             ? Math.round(100 - (currentDiff.addedCount / currentDiff.totalCount) * 100)
             : 100;
           similarityText.textContent = getSimilarityLabel(similarity);
-
-          tabButtons.forEach(button => button.classList.toggle("active", button.dataset.tab === "editorPanel"));
-          document.getElementById("editorPanel").classList.add("active");
-          document.getElementById("historyPanel").classList.remove("active");
+          switchToEditorTab();
         });
 
         historyList.appendChild(li);
@@ -695,8 +794,251 @@ function renderTokens(tokens, mode) {
       setOutputHtml(html);
     }
 
+    function isEligibleSynonymToken(word) {
+      if (!word || word.length < 2 || word.length > 40) return false;
+      if (!/[\p{L}]/u.test(word)) return false;
+      if (/^\d+(?:[.,]\d+)?$/.test(word)) return false;
+      if (/^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)*$/.test(word)) return false;
+      if (/^(https?:\/\/|www\.)/i.test(word)) return false;
+      if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(word)) return false;
+      return true;
+    }
+
+    function closeSynonymPopover() {
+      if (synonymController) {
+        synonymController.abort();
+        synonymController = null;
+      }
+      if (synonymPopover) {
+        synonymPopover.remove();
+        synonymPopover = null;
+      }
+      synonymAnchor = null;
+    }
+
+    function openSynonymPopover(anchor) {
+      closeSynonymPopover();
+      synonymAnchor = anchor;
+      const rect = anchor.getBoundingClientRect();
+      const popover = document.createElement("div");
+      popover.className = "synonym-popover";
+      popover.style.left = `${Math.min(window.innerWidth - 280, Math.max(8, rect.left))}px`;
+      popover.style.top = `${Math.min(window.innerHeight - 120, rect.bottom + 8)}px`;
+      popover.innerHTML = '<div class="synonym-loading">Cargando…</div>';
+      document.body.appendChild(popover);
+      synonymPopover = popover;
+      return popover;
+    }
+
+    function applyCapitalization(sourceWord, replacementWord) {
+      if (!sourceWord || !replacementWord) return replacementWord;
+      if (/^[A-ZÁÉÍÓÚÑ]/.test(sourceWord)) {
+        return replacementWord.charAt(0).toUpperCase() + replacementWord.slice(1);
+      }
+      return replacementWord;
+    }
+
+    async function fetchSynonyms(word, context) {
+      const key = `${word.toLowerCase()}|${context}`;
+      if (synonymCache.has(key)) return synonymCache.get(key);
+
+      synonymController = new AbortController();
+      try {
+        const response = await fetch("/api/synonyms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ word, context, tone: tone.value, mode: currentMode }),
+          signal: synonymController.signal
+        });
+        const data = await response.json().catch(() => ({ synonyms: [] }));
+        const synonyms = Array.isArray(data.synonyms) ? data.synonyms.slice(0, 4) : [];
+        synonymCache.set(key, synonyms);
+        return synonyms;
+      } catch {
+        return [];
+      } finally {
+        synonymController = null;
+      }
+    }
+
+    async function onSynWordClick(event) {
+      const target = event.target.closest(".syn-word");
+      if (!target || !output.contains(target) || !currentDiff?.outTokens?.length) return;
+      const outIndex = Number.parseInt(target.dataset.outIndex, 10);
+      if (!Number.isInteger(outIndex) || outIndex < 0 || outIndex >= currentDiff.outTokens.length) return;
+
+      const currentWord = currentDiff.outTokens[outIndex];
+      if (!isEligibleSynonymToken(currentWord)) {
+        const pop = openSynonymPopover(target);
+        pop.innerHTML = '<div class="synonym-empty">Sin alternativas útiles</div>';
+        return;
+      }
+
+      if (synonymAnchor === target && synonymPopover) {
+        closeSynonymPopover();
+        return;
+      }
+
+      const popover = openSynonymPopover(target);
+      const context = joinTokens(currentDiff.outTokens.slice(Math.max(0, outIndex - 15), outIndex + 16)).slice(0, 900);
+      const synonyms = await fetchSynonyms(currentWord, context);
+      if (!synonymPopover || synonymAnchor !== target) return;
+
+      if (!synonyms.length) {
+        popover.innerHTML = '<div class="synonym-empty">Sin alternativas útiles</div>';
+        return;
+      }
+
+      popover.innerHTML = "";
+      synonyms.forEach((synonym) => {
+        const optionButton = document.createElement("button");
+        optionButton.type = "button";
+        optionButton.textContent = synonym;
+        optionButton.addEventListener("click", () => {
+          const outTokens = [...currentDiff.outTokens];
+          outTokens[outIndex] = applyCapitalization(currentWord, synonym);
+          currentResultText = joinTokens(outTokens);
+          currentDiff = buildDiffData(currentOriginalText, currentResultText);
+          diffViewEnabled = false;
+          applyOutputView();
+          outputCharCount.textContent = `${currentResultText.length} caracteres`;
+          const similarity = currentDiff.totalCount
+            ? Math.round(100 - (currentDiff.addedCount / currentDiff.totalCount) * 100)
+            : 100;
+          similarityText.textContent = getSimilarityLabel(similarity);
+          closeSynonymPopover();
+        });
+        popover.appendChild(optionButton);
+      });
+    }
+
+    function clearOutputState() {
+      currentOriginalText = "";
+      currentResultText = "";
+      currentDiff = null;
+      diffViewEnabled = false;
+      isManualEdited = false;
+      setOutputHtml("");
+      outputCharCount.textContent = "";
+      similarityText.textContent = "";
+      disableDiffButton("");
+      updateExportButtons();
+      closeSynonymPopover();
+    }
+
+    async function extractFileText(file) {
+      if (!file) return "";
+      const name = file.name.toLowerCase();
+      if (file.size > MAX_DROP_FILE_SIZE) {
+        throw new Error("El archivo supera el límite de 5MB.");
+      }
+      if (name.endsWith(".txt")) {
+        return await file.text();
+      }
+      if (name.endsWith(".docx")) {
+        if (!window.mammoth) throw new Error("No se pudo cargar Mammoth para leer DOCX.");
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await window.mammoth.extractRawText({ arrayBuffer });
+        return result.value || "";
+      }
+      throw new Error("Solo se admiten archivos .txt o .docx.");
+    }
+
+    async function handleDroppedFile(file) {
+      try {
+        const text = await extractFileText(file);
+        if (!text.trim()) {
+          setOutputHtml("El archivo no contiene texto legible.");
+          return;
+        }
+        input.value = text;
+        updateInputCount();
+        switchToEditorTab();
+        clearOutputState();
+      } catch (error) {
+        setOutputHtml(escapeHtml(error.message || "No se pudo leer el archivo."));
+      }
+    }
+
+    function installDragAndDrop() {
+      let dragDepth = 0;
+      const activateDrop = () => {
+        editor.classList.add("drop-active");
+        input.classList.add("drop-active");
+      };
+      const clearDrop = () => {
+        editor.classList.remove("drop-active");
+        input.classList.remove("drop-active");
+      };
+
+      const onDragOver = (event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+      };
+
+      [editor, input].forEach((el) => {
+        el.addEventListener("dragenter", (event) => {
+          event.preventDefault();
+          dragDepth += 1;
+          activateDrop();
+        });
+        el.addEventListener("dragover", onDragOver);
+        el.addEventListener("dragleave", (event) => {
+          event.preventDefault();
+          dragDepth = Math.max(0, dragDepth - 1);
+          if (!dragDepth) clearDrop();
+        });
+        el.addEventListener("drop", async (event) => {
+          event.preventDefault();
+          dragDepth = 0;
+          clearDrop();
+          const file = event.dataTransfer?.files?.[0];
+          if (file) await handleDroppedFile(file);
+        });
+      });
+    }
+
+    function downloadPdf() {
+      if (!currentResultText.trim() || !window.jspdf?.jsPDF) return;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const margin = 48;
+      const pageWidth = doc.internal.pageSize.getWidth() - margin * 2;
+      const pageHeight = doc.internal.pageSize.getHeight() - margin * 2;
+      const lines = doc.splitTextToSize(currentResultText, pageWidth);
+      let y = margin;
+      doc.setFontSize(12);
+      lines.forEach((line) => {
+        if (y > margin + pageHeight) {
+          doc.addPage();
+          y = margin;
+        }
+        doc.text(line, margin, y);
+        y += 18;
+      });
+      doc.save("para.pdf");
+    }
+
+    async function downloadDocx() {
+      if (!currentResultText.trim() || !window.docx) return;
+      const { Document, Packer, Paragraph, TextRun } = window.docx;
+      const paragraphs = currentResultText.split(/\n+/).map(line => new Paragraph({ children: [new TextRun(line)] }));
+      const doc = new Document({ sections: [{ children: paragraphs.length ? paragraphs : [new Paragraph("")] }] });
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "para.docx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
     updateInputCount();
     renderHistory();
+    updateExportButtons();
+    installDragAndDrop();
 
     input.addEventListener("input", updateInputCount);
 
@@ -720,6 +1062,19 @@ function renderTokens(tokens, mode) {
       applyOutputView();
     });
 
+    output.addEventListener("click", onSynWordClick);
+
+    document.addEventListener("click", (event) => {
+      if (!synonymPopover) return;
+      if (synonymPopover.contains(event.target)) return;
+      if (event.target.closest(".syn-word") === synonymAnchor) return;
+      closeSynonymPopover();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") closeSynonymPopover();
+    });
+
     output.addEventListener("input", () => {
       if (isProgrammaticUpdate || !currentResultText) return;
 
@@ -728,6 +1083,7 @@ function renderTokens(tokens, mode) {
       disableDiffButton("Editado manualmente");
       outputCharCount.textContent = `${output.textContent.length} caracteres`;
       similarityText.textContent = "";
+      updateExportButtons();
     });
 
     btn.addEventListener("click", async () => {
@@ -751,6 +1107,7 @@ function renderTokens(tokens, mode) {
       currentOriginalText = text;
       currentResultText = "";
       currentDiff = null;
+      updateExportButtons();
       showSkeleton();
 
       try {
@@ -816,6 +1173,7 @@ function renderTokens(tokens, mode) {
 
               setOutputHtml(escapeHtml(currentResultText));
               outputCharCount.textContent = `${currentResultText.length} caracteres`;
+              updateExportButtons();
             }
 
             if (payload.type === "error") {
@@ -878,6 +1236,7 @@ function renderTokens(tokens, mode) {
         }
         btn.disabled = false;
         setParaphraseLabel(false);
+        updateExportButtons();
       }
     });
 
@@ -898,6 +1257,12 @@ function renderTokens(tokens, mode) {
         }, 1200);
       }
     });
+
+    downloadPdfBtn.addEventListener("click", downloadPdf);
+    downloadDocxBtn.addEventListener("click", () => {
+      downloadDocx().catch(() => {});
+    });
   </script>
+
 </body>
 </html>
