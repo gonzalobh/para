@@ -6,12 +6,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
+    html,
+    body {
+      height: 100%;
+    }
+
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
       background: linear-gradient(180deg, #ffffff 0%, #f9f9f9 100%);
       margin: 0;
-      padding: 40px;
+      min-height: 100vh;
       color: #111;
+    }
+
+    .page {
+      min-height: 100vh;
+      padding: 40px;
+      box-sizing: border-box;
     }
 
     .container {
@@ -163,13 +174,13 @@
       border: none;
       border-radius: 50px;
       cursor: pointer;
-      background: #000;
+      background: #222;
       color: #fff;
-      transition: transform 0.2s ease;
+      transition: background-color 0.2s ease;
     }
 
     button#paraphrase:hover {
-      transform: scale(1.02);
+      background: #000;
     }
 
     button:disabled {
@@ -185,6 +196,8 @@
   </style>
 </head>
 <body>
+
+  <div class="page">
 
   <div class="container">
     <h1>para</h1>
@@ -238,8 +251,9 @@
         </select>
       </div>
 
-      <button id="paraphrase">✨ Parafrasear</button>
+      <button id="paraphrase">Parafrasear</button>
     </div>
+  </div>
   </div>
 
   <script>
@@ -368,7 +382,13 @@
     const similarityText = document.getElementById("similarityText");
 
     function setParaphraseLabel(isLoading) {
-      btn.textContent = isLoading ? "Parafraseando…" : "✨ Parafrasear";
+      btn.textContent = isLoading ? "Parafraseando…" : "Parafrasear";
+    }
+
+    function getSimilarityLabel(similarity) {
+      if (similarity >= 80) return "Cambios leves";
+      if (similarity >= 60) return "Cambios moderados";
+      return "Reescritura profunda";
     }
 
     function updateInputCount() {
@@ -419,7 +439,7 @@
             const similarity = totalCount
               ? Math.round(100 - (addedCount / totalCount) * 100)
               : 100;
-            similarityText.textContent = `Similitud: ${similarity}%`;
+            similarityText.textContent = getSimilarityLabel(similarity);
           }
         } else {
           output.textContent = "No se pudo generar el texto.";
