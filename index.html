@@ -737,6 +737,8 @@
     }
 
     async function applyStyle(effect) {
+      if (isManualEdited) return;
+
       const sel = getSelectionData();
       if (!sel) return;
 
@@ -757,17 +759,29 @@
         const data = await res.json();
         if (!data.replacement) throw new Error();
 
-        inputText.value =
-          sel.full.slice(0, sel.start) +
+        const baseText = currentResultText || inputText.value;
+
+        const newText =
+          baseText.slice(0, sel.start) +
           data.replacement +
-          sel.full.slice(sel.end);
+          baseText.slice(sel.end);
 
-        const cursor = sel.start + data.replacement.length;
-        inputText.setSelectionRange(cursor, cursor);
-        inputText.focus();
+        currentOriginalText = inputText.value;
+        currentResultText = newText;
+        currentDiff = buildDiffData(currentOriginalText, currentResultText);
 
-        updateInputCount();
-        clearOutputState();
+        diffViewEnabled = false;
+        isManualEdited = false;
+
+        applyOutputView();
+        outputCharCount.textContent = `${currentResultText.length} caracteres`;
+
+        const similarity = currentDiff.totalCount
+          ? Math.round(100 - (currentDiff.addedCount / currentDiff.totalCount) * 100)
+          : 100;
+
+        similarityText.textContent = getSimilarityLabel(similarity);
+
         hideStyleBrush();
 
       } catch {
