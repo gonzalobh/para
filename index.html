@@ -57,18 +57,34 @@
       gap: 16px;
     }
 
-    textarea {
+    textarea,
+    .output {
       width: 100%;
       min-height: 220px;
       padding: 12px;
       font-size: 15px;
       border-radius: 8px;
       border: 1px solid #ddd;
+      box-sizing: border-box;
+    }
+
+    textarea {
       resize: vertical;
     }
 
-    textarea[readonly] {
+    .output {
       background: #f5f5f5;
+      white-space: pre-wrap;
+    }
+
+    .output:empty::before {
+      content: attr(data-placeholder);
+      color: #888;
+    }
+
+    .added {
+      color: #15c;
+      font-weight: 500;
     }
 
     /* CONTROLS */
@@ -135,11 +151,11 @@
         placeholder="Ingresa el texto que quieres parafrasear..."
       ></textarea>
 
-      <textarea
+      <div
         id="outputText"
-        placeholder="Aquí aparecerá el texto parafraseado"
-        readonly
-      ></textarea>
+        class="output"
+        data-placeholder="Aquí aparecerá el texto parafraseado"
+      ></div>
     </div>
 
     <!-- CONTROLS -->
@@ -181,7 +197,7 @@
 
       btn.disabled = true;
       btn.textContent = "Parafraseando…";
-      output.value = "";
+      output.innerHTML = "";
 
       try {
         const res = await fetch("/api/summary", {
@@ -197,10 +213,10 @@
         });
 
         const data = await res.json();
-        output.value = data.result || "No se pudo generar el texto.";
+        output.innerHTML = data.result || "No se pudo generar el texto.";
 
       } catch (err) {
-        output.value = "Error al generar el texto.";
+        output.textContent = "Error al generar el texto.";
       }
 
       btn.disabled = false;
