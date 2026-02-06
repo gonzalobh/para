@@ -26,7 +26,7 @@
     }
 
     .container {
-      max-width: 980px;
+      max-width: 900px;
       margin: 0 auto;
       background: #fff;
       padding: 28px;
@@ -49,8 +49,8 @@
       font-size: 14px;
     }
 
-    .modes,
-    .variant-tabs {
+    /* MODES */
+    .modes {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
@@ -60,8 +60,7 @@
       border-radius: 14px;
     }
 
-    .modes button,
-    .variant-tabs button {
+    .modes button {
       padding: 6px 12px;
       font-size: 14px;
       border-radius: 999px;
@@ -71,22 +70,21 @@
       color: #585858;
     }
 
-    .modes button.active,
-    .variant-tabs button.active {
+    .modes button.active {
       background: #fff;
       color: #111;
       box-shadow: 0 1px 3px rgba(0,0,0,0.08);
     }
 
+    /* EDITOR */
     .editor {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 20px;
+      gap: 32px;
     }
 
     textarea,
-    .output,
-    .original {
+    .output {
       width: 100%;
       min-height: 220px;
       padding: 16px;
@@ -99,19 +97,12 @@
       box-sizing: border-box;
     }
 
-    .original {
-      white-space: pre-wrap;
-      color: #515151;
-      border-color: #ececec;
-    }
-
     textarea {
       resize: vertical;
       color: #111;
     }
 
-    textarea:focus,
-    .output:focus {
+    textarea:focus {
       outline: none;
       border-color: #111;
     }
@@ -122,8 +113,7 @@
 
     .output {
       white-space: pre-wrap;
-      color: rgba(0, 0, 0, 0.8);
-      border: 1px solid #efefef;
+      color: rgba(0, 0, 0, 0.6);
     }
 
     .output:empty::before {
@@ -131,33 +121,10 @@
       color: #888;
     }
 
-    .diff-added {
-      text-decoration: underline;
-      text-decoration-thickness: 2px;
-      text-decoration-color: #1b6cff;
-      color: #0d4dbe;
-      background: rgba(19, 108, 255, 0.08);
-      border-radius: 3px;
-      padding: 0 1px;
-    }
-
-    .diff-removed {
-      text-decoration: line-through;
-      color: #b11d3a;
-      background: rgba(177, 29, 58, 0.08);
-      border-radius: 3px;
-      padding: 0 1px;
-    }
-
-    .status-label {
-      margin-top: 8px;
-      font-size: 12px;
-      color: #6a6a6a;
-      min-height: 16px;
-    }
-
-    .status-label.warning {
-      color: #8f6a00;
+    .added {
+      color: #15c;
+      font-weight: 500;
+      opacity: 1;
     }
 
     .meta {
@@ -165,7 +132,10 @@
       font-size: 12px;
       color: #8b8b8b;
       line-height: 1.4;
-      min-height: 16px;
+    }
+
+    .meta:empty {
+      display: none;
     }
 
     .copy-btn {
@@ -182,54 +152,7 @@
       box-shadow: 0 2px 8px rgba(0,0,0,0.08);
     }
 
-    .skeleton {
-      display: none;
-      gap: 8px;
-      margin-top: 12px;
-    }
-
-    .skeleton.active {
-      display: grid;
-    }
-
-    .skeleton-line {
-      height: 12px;
-      border-radius: 10px;
-      background: linear-gradient(90deg, #ececec 20%, #f6f6f6 40%, #ececec 70%);
-      background-size: 200% 100%;
-      animation: shimmer 1.3s infinite;
-    }
-
-    @keyframes shimmer {
-      from { background-position: 200% 0; }
-      to { background-position: -200% 0; }
-    }
-
-    .inputs-grid {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      margin-bottom: 16px;
-    }
-
-    .field label {
-      display: block;
-      font-size: 12px;
-      color: #5d5d5d;
-      margin-bottom: 6px;
-    }
-
-    select,
-    input[type="text"],
-    input[type="number"] {
-      width: 100%;
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: 1px solid #ddd;
-      font-size: 14px;
-      box-sizing: border-box;
-    }
-
+    /* CONTROLS */
     .controls {
       display: flex;
       justify-content: space-between;
@@ -238,9 +161,11 @@
       gap: 16px;
     }
 
-    .actions {
-      display: flex;
-      gap: 8px;
+    select {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 14px;
     }
 
     button#paraphrase {
@@ -258,25 +183,12 @@
       background: #000;
     }
 
-    button#clearAll {
-      border: 1px solid #ddd;
-      background: #fff;
-      color: #555;
-      border-radius: 999px;
-      padding: 12px 16px;
-      cursor: pointer;
-    }
-
     button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
 
-    @media (max-width: 900px) {
-      .inputs-grid {
-        grid-template-columns: 1fr;
-      }
-
+    @media (max-width: 768px) {
       .editor {
         grid-template-columns: 1fr;
       }
@@ -284,131 +196,70 @@
   </style>
 </head>
 <body>
+
   <div class="page">
-    <div class="container">
-      <h1>para</h1>
-      <p class="subtitle">transform your text</p>
 
-      <div class="modes">
-        <button data-mode="Standard" class="active">Estándar</button>
-        <button data-mode="Fluency">Fluidez</button>
-        <button data-mode="Humanizer">Humanizar</button>
-        <button data-mode="Simplify">Simplificar</button>
-        <button data-mode="Creative">Creativo</button>
-        <button data-mode="Academic">Académico</button>
-        <button data-mode="Shorten">Acortar</button>
-        <button data-mode="Expand">Expandir</button>
-        <button data-mode="Rephraser">Reformular</button>
-        <button data-mode="Custom">Personalizado</button>
+  <div class="container">
+    <h1>para</h1>
+    <p class="subtitle">transform your text</p>
+
+    <!-- MODES -->
+    <div class="modes">
+      <button data-mode="Standard" class="active">Estándar</button>
+      <button data-mode="Fluency">Fluidez</button>
+      <button data-mode="Humanizer">Humanizar</button>
+      <button data-mode="Simplify">Simplificar</button>
+      <button data-mode="Creative">Creativo</button>
+      <button data-mode="Academic">Académico</button>
+      <button data-mode="Shorten">Acortar</button>
+      <button data-mode="Expand">Expandir</button>
+      <button data-mode="Rephraser">Reformular</button>
+      <button data-mode="Custom">Personalizado</button>
+    </div>
+
+    <!-- TEXT AREAS -->
+    <div class="editor">
+      <div>
+        <textarea
+          id="inputText"
+          placeholder="Ingresa el texto que quieres parafrasear..."
+        ></textarea>
+        <div id="inputCharCount" class="meta">0 caracteres</div>
       </div>
 
-      <div class="inputs-grid">
-        <div class="field">
-          <label for="tone">Tono</label>
-          <select id="tone">
-            <option value="Formal">Formal</option>
-            <option value="Casual">Casual</option>
-            <option value="Professional">Professional</option>
-            <option value="Witty">Witty</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="outputLanguage">Idioma de salida</label>
-          <select id="outputLanguage">
-            <option value="auto">Automático</option>
-            <option value="es">Español</option>
-            <option value="en">Inglés</option>
-          </select>
-        </div>
-
-        <div class="field">
-          <label for="lengthControl">Control de longitud</label>
-          <select id="lengthControl">
-            <option value="keep">Mantener longitud</option>
-            <option value="reduce20">Reducir 20%</option>
-            <option value="maxChars">Máximo X caracteres</option>
-          </select>
-        </div>
-
-        <div class="field" id="maxCharsField" style="display:none;">
-          <label for="maxCharsInput">Máximo de caracteres</label>
-          <input id="maxCharsInput" type="number" min="20" step="10" placeholder="Ej. 300" />
-        </div>
-
-        <div class="field" style="grid-column: span 2;">
-          <label for="lockedKeywords">Palabras que no deben cambiar</label>
-          <input id="lockedKeywords" type="text" placeholder="Marca, nombre propio, término técnico…" />
-        </div>
-      </div>
-
-      <div class="variant-tabs" id="variantTabs">
-        <button data-variant="short">Corta</button>
-        <button data-variant="standard" class="active">Estándar</button>
-        <button data-variant="creative">Creativa</button>
-      </div>
-
-      <div class="editor">
-        <div>
-          <textarea id="inputText" placeholder="Ingresa el texto que quieres parafrasear..."></textarea>
-          <div id="inputCharCount" class="meta">0 caracteres</div>
-          <div id="originalPreview" class="original"></div>
-        </div>
-
-        <div class="output-panel">
-          <div id="outputText" class="output" contenteditable="true" data-placeholder="Aquí aparecerá el texto parafraseado"></div>
-          <div id="skeleton" class="skeleton">
-            <div class="skeleton-line" style="width: 95%"></div>
-            <div class="skeleton-line" style="width: 86%"></div>
-            <div class="skeleton-line" style="width: 91%"></div>
-            <div class="skeleton-line" style="width: 77%"></div>
-          </div>
-          <div id="statusLabel" class="status-label"></div>
-          <div id="outputCharCount" class="meta"></div>
-          <div id="similarityText" class="meta"></div>
-          <button id="copyOutput" class="copy-btn" type="button" aria-label="Copiar salida">Copy</button>
-        </div>
-      </div>
-
-      <div class="controls">
-        <div class="actions">
-          <button id="paraphrase">Parafrasear</button>
-          <button id="clearAll" type="button">Limpiar todo</button>
-        </div>
+      <div class="output-panel">
+        <div
+          id="outputText"
+          class="output"
+          data-placeholder="Aquí aparecerá el texto parafraseado"
+        ></div>
+        <div id="outputCharCount" class="meta"></div>
+        <div id="similarityText" class="meta"></div>
+        <button id="copyOutput" class="copy-btn" type="button" aria-label="Copiar salida">Copy</button>
       </div>
     </div>
+
+    <!-- CONTROLS -->
+    <div class="controls">
+      <div>
+        <label for="tone">Tono:</label><br />
+        <select id="tone">
+          <option value="Formal">Formal</option>
+          <option value="Casual">Casual</option>
+          <option value="Professional">Professional</option>
+          <option value="Witty">Witty</option>
+        </select>
+      </div>
+
+      <button id="paraphrase">Parafrasear</button>
+    </div>
+  </div>
   </div>
 
   <script>
-    const DIFF_TOKEN_LIMIT = 4000;
-    const HISTORY_KEY = "para.history.v1";
-    const SESSION_KEY = "para.session.v1";
-
     let currentMode = "Standard";
-    let currentVariant = "standard";
-    let manualEdited = false;
-    let isRenderingProgrammatically = false;
-    let latestVariants = { short: "", standard: "", creative: "" };
 
-    const modeButtons = document.querySelectorAll(".modes button");
-    const variantButtons = document.querySelectorAll(".variant-tabs button");
-    const input = document.getElementById("inputText");
-    const originalPreview = document.getElementById("originalPreview");
-    const output = document.getElementById("outputText");
-    const tone = document.getElementById("tone");
-    const outputLanguage = document.getElementById("outputLanguage");
-    const lengthControl = document.getElementById("lengthControl");
-    const maxCharsInput = document.getElementById("maxCharsInput");
-    const maxCharsField = document.getElementById("maxCharsField");
-    const lockedKeywords = document.getElementById("lockedKeywords");
-    const btn = document.getElementById("paraphrase");
-    const clearAllBtn = document.getElementById("clearAll");
-    const copyBtn = document.getElementById("copyOutput");
-    const inputCharCount = document.getElementById("inputCharCount");
-    const outputCharCount = document.getElementById("outputCharCount");
-    const similarityText = document.getElementById("similarityText");
-    const statusLabel = document.getElementById("statusLabel");
-    const skeleton = document.getElementById("skeleton");
+    const DIFF_TOKEN_LIMIT = 4000;
 
     function escapeHtml(str) {
       return str
@@ -420,26 +271,45 @@
     }
 
     function tokenize(text) {
-      return text.match(/\p{L}[\p{L}\p{N}_'-]*|\p{N}+|[^\s\p{L}\p{N}]|\s+/gu) || [];
+      return (text.match(/\p{L}[\p{L}\p{N}_'-]*|\p{N}+|[^\s\p{L}\p{N}]|\s+/gu) || []);
     }
 
-    function renderDiffTokens(tokens) {
+    function shouldJoinWithoutSpace(prev, curr) {
+      if (!prev || !curr) return false;
+      if (/^\s+$/.test(curr) || /^\s+$/.test(prev)) return false;
+
+      const closers = /^[.,;:!?%)\]»”’]+$/;
+      const openers = /^[(\[{«“‘¿¡]+$/;
+      const apostropheLike = /^[’']$/;
+
+      return closers.test(curr) || openers.test(prev) || apostropheLike.test(curr) || apostropheLike.test(prev);
+    }
+
+    function renderTokens(tokens) {
       let html = "";
-      for (const token of tokens) {
-        if (token.type === "added") {
-          html += `<span class="diff-added">${escapeHtml(token.value)}</span>`;
-        } else if (token.type === "removed") {
-          html += `<span class="diff-removed">${escapeHtml(token.value)}</span>`;
-        } else {
-          html += escapeHtml(token.value);
+
+      tokens.forEach((token, i) => {
+        const raw = token.value;
+        if (!raw) return;
+
+        const escaped = escapeHtml(raw);
+        const wrapped = token.added
+          ? `<span class="added">${escaped}</span>`
+          : escaped;
+
+        if (i > 0 && !shouldJoinWithoutSpace(tokens[i - 1].value, raw)) {
+          html += " ";
         }
-      }
+
+        html += wrapped;
+      });
+
       return html;
     }
 
-    function buildDiff(originalText, paraphrasedText) {
-      const origTokens = tokenize(originalText);
-      const outTokens = tokenize(paraphrasedText);
+    function highlightAddedWords(originalText, paraphrasedText) {
+      const origTokens = tokenize(originalText).filter(t => !/^\s+$/.test(t));
+      const outTokens = tokenize(paraphrasedText).filter(t => !/^\s+$/.test(t));
 
       if (!outTokens.length) {
         return { html: "", addedCount: 0, totalCount: 0, diffDisabled: false };
@@ -474,35 +344,42 @@
 
       while (i < n && j < m) {
         if (origTokens[i] === outTokens[j]) {
-          rendered.push({ type: "same", value: outTokens[j] });
+          rendered.push({ value: outTokens[j], added: false });
           i++;
           j++;
         } else if (dp[i][j + 1] >= dp[i + 1][j]) {
-          rendered.push({ type: "added", value: outTokens[j] });
+          rendered.push({ value: outTokens[j], added: true });
           j++;
         } else {
-          rendered.push({ type: "removed", value: origTokens[i] });
           i++;
         }
       }
 
-      while (i < n) {
-        rendered.push({ type: "removed", value: origTokens[i++] });
-      }
       while (j < m) {
-        rendered.push({ type: "added", value: outTokens[j++] });
+        rendered.push({ value: outTokens[j], added: true });
+        j++;
       }
 
-      const addedCount = rendered.filter((t) => t.type === "added").length;
-      const totalCount = rendered.filter((t) => t.type !== "removed").length;
+      const addedCount = rendered.filter(token => token.added).length;
+      const totalCount = rendered.length;
 
       return {
-        html: renderDiffTokens(rendered),
+        html: renderTokens(rendered),
         addedCount,
         totalCount,
         diffDisabled: false
       };
     }
+
+    const modeButtons = document.querySelectorAll(".modes button");
+    const input = document.getElementById("inputText");
+    const output = document.getElementById("outputText");
+    const tone = document.getElementById("tone");
+    const btn = document.getElementById("paraphrase");
+    const copyBtn = document.getElementById("copyOutput");
+    const inputCharCount = document.getElementById("inputCharCount");
+    const outputCharCount = document.getElementById("outputCharCount");
+    const similarityText = document.getElementById("similarityText");
 
     function setParaphraseLabel(isLoading) {
       btn.textContent = isLoading ? "Parafraseando…" : "Parafrasear";
@@ -516,294 +393,66 @@
 
     function updateInputCount() {
       inputCharCount.textContent = `${input.value.length} caracteres`;
-      originalPreview.textContent = input.value;
-      persistSession();
-    }
-
-    function setStatus(message, warning = false) {
-      statusLabel.textContent = message;
-      statusLabel.classList.toggle("warning", warning);
-    }
-
-    function activeOutputText() {
-      if (manualEdited) return output.textContent;
-      return latestVariants[currentVariant] || "";
-    }
-
-    function saveHistoryEntry() {
-      const result = activeOutputText().trim();
-      if (!input.value.trim() || !result) return;
-
-      const entry = {
-        original: input.value,
-        variant: currentVariant,
-        result,
-        timestamp: Date.now()
-      };
-
-      const history = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
-      history.unshift(entry);
-      localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, 10)));
-      persistSession();
-    }
-
-    function persistSession() {
-      const state = {
-        input: input.value,
-        mode: currentMode,
-        tone: tone.value,
-        outputLanguage: outputLanguage.value,
-        lengthControl: lengthControl.value,
-        maxChars: maxCharsInput.value,
-        lockedKeywords: lockedKeywords.value,
-        variant: currentVariant,
-        variants: latestVariants,
-        manualEdited,
-        outputText: output.textContent
-      };
-      localStorage.setItem(SESSION_KEY, JSON.stringify(state));
-    }
-
-    function restoreSession() {
-      const raw = localStorage.getItem(SESSION_KEY);
-      if (!raw) return;
-
-      try {
-        const saved = JSON.parse(raw);
-        input.value = saved.input || "";
-        tone.value = saved.tone || tone.value;
-        outputLanguage.value = saved.outputLanguage || "auto";
-        lengthControl.value = saved.lengthControl || "keep";
-        maxCharsInput.value = saved.maxChars || "";
-        lockedKeywords.value = saved.lockedKeywords || "";
-        currentVariant = saved.variant || "standard";
-        latestVariants = saved.variants || latestVariants;
-        manualEdited = Boolean(saved.manualEdited);
-
-        modeButtons.forEach((button) => {
-          button.classList.toggle("active", button.dataset.mode === (saved.mode || "Standard"));
-        });
-        currentMode = saved.mode || "Standard";
-
-        variantButtons.forEach((button) => {
-          button.classList.toggle("active", button.dataset.variant === currentVariant);
-        });
-
-        maxCharsField.style.display = lengthControl.value === "maxChars" ? "block" : "none";
-        updateInputCount();
-
-        if (manualEdited) {
-          isRenderingProgrammatically = true;
-          output.textContent = saved.outputText || "";
-          isRenderingProgrammatically = false;
-          setStatus("Editado manualmente");
-        } else if (latestVariants[currentVariant]) {
-          renderOutput();
-        }
-      } catch {
-        // ignore broken local data
-      }
-    }
-
-    function renderOutput() {
-      const text = latestVariants[currentVariant] || "";
-      if (!text) {
-        isRenderingProgrammatically = true;
-        output.innerHTML = "";
-        isRenderingProgrammatically = false;
-        outputCharCount.textContent = "";
-        similarityText.textContent = "";
-        return;
-      }
-
-      const original = input.value;
-      const diff = buildDiff(original, text);
-      isRenderingProgrammatically = true;
-      output.innerHTML = diff.html;
-      isRenderingProgrammatically = false;
-
-      outputCharCount.textContent = `${text.length} caracteres`;
-      if (diff.diffDisabled) {
-        setStatus("Vista diferencial desactivada por longitud", true);
-        similarityText.textContent = "";
-      } else {
-        const similarity = diff.totalCount ? Math.round(100 - (diff.addedCount / diff.totalCount) * 100) : 100;
-        similarityText.textContent = getSimilarityLabel(similarity);
-        setStatus("");
-      }
-
-      persistSession();
-    }
-
-    function clearVisualStates() {
-      similarityText.textContent = "";
-      outputCharCount.textContent = "";
-      setStatus("");
-      skeleton.classList.remove("active");
     }
 
     updateInputCount();
-    restoreSession();
+    input.addEventListener("input", updateInputCount);
 
-    input.addEventListener("input", () => {
-      updateInputCount();
-      if (!manualEdited && latestVariants[currentVariant]) {
-        renderOutput();
-      }
-    });
-
-    output.addEventListener("input", () => {
-      if (isRenderingProgrammatically) return;
-      manualEdited = true;
-      setStatus("Editado manualmente");
-      similarityText.textContent = "";
-      persistSession();
-    });
-
-    modeButtons.forEach((btnMode) => {
+    modeButtons.forEach(btnMode => {
       btnMode.addEventListener("click", () => {
         currentMode = btnMode.dataset.mode;
-        modeButtons.forEach((b) => b.classList.remove("active"));
+        modeButtons.forEach(b => b.classList.remove("active"));
         btnMode.classList.add("active");
-        persistSession();
       });
-    });
-
-    variantButtons.forEach((variantBtn) => {
-      variantBtn.addEventListener("click", () => {
-        currentVariant = variantBtn.dataset.variant;
-        variantButtons.forEach((b) => b.classList.remove("active"));
-        variantBtn.classList.add("active");
-        manualEdited = false;
-        renderOutput();
-      });
-    });
-
-    lengthControl.addEventListener("change", () => {
-      maxCharsField.style.display = lengthControl.value === "maxChars" ? "block" : "none";
-      persistSession();
-    });
-
-    [maxCharsInput, lockedKeywords, tone, outputLanguage].forEach((el) => {
-      el.addEventListener("input", persistSession);
-      el.addEventListener("change", persistSession);
     });
 
     btn.addEventListener("click", async () => {
       const text = input.value.trim();
       if (!text) return;
 
-      if (lengthControl.value === "maxChars") {
-        const maxChars = Number(maxCharsInput.value);
-        if (!maxChars || maxChars < 20) {
-          setStatus("Define un máximo válido de caracteres (mínimo 20).", true);
-          return;
-        }
-      }
-
       btn.disabled = true;
       setParaphraseLabel(true);
-      clearVisualStates();
-      skeleton.classList.add("active");
       output.innerHTML = "";
-      latestVariants = { short: "", standard: "", creative: "" };
-      manualEdited = false;
+      outputCharCount.textContent = "";
+      similarityText.textContent = "";
 
       try {
         const res = await fetch("/api/summary", {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json"
+          },
           body: JSON.stringify({
             text,
             mode: currentMode,
-            tone: tone.value,
-            outputLanguage: outputLanguage.value,
-            lockedKeywords: lockedKeywords.value,
-            lengthControl: lengthControl.value,
-            maxChars: maxCharsInput.value
+            tone: tone.value
           })
         });
 
-        if (!res.ok || !res.body) {
-          if (res.status === 413) {
-            throw new Error("El texto es demasiado largo, prueba con un párrafo más corto.");
+        const data = await res.json();
+        if (data.result) {
+          const { html, addedCount, totalCount, diffDisabled } = highlightAddedWords(text, data.result);
+          output.innerHTML = html;
+
+          if (!diffDisabled) {
+            outputCharCount.textContent = `${data.result.length} caracteres`;
+            const similarity = totalCount
+              ? Math.round(100 - (addedCount / totalCount) * 100)
+              : 100;
+            similarityText.textContent = getSimilarityLabel(similarity);
           }
-          throw new Error("No se pudo conectar. Revisa tu conexión.");
+        } else {
+          output.textContent = "No se pudo generar el texto.";
         }
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let pending = "";
-        let firstChunkArrived = false;
-
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-
-          pending += decoder.decode(value, { stream: true });
-          const lines = pending.split("\n");
-          pending = lines.pop() || "";
-
-          for (const line of lines) {
-            if (!line.trim()) continue;
-            const packet = JSON.parse(line);
-
-            if (packet.type === "chunk") {
-              latestVariants[packet.variant] = (latestVariants[packet.variant] || "") + packet.content;
-              if (!firstChunkArrived) {
-                firstChunkArrived = true;
-                skeleton.classList.remove("active");
-              }
-              if (!manualEdited && packet.variant === currentVariant) {
-                renderOutput();
-              }
-            }
-
-            if (packet.type === "done") {
-              manualEdited = false;
-              renderOutput();
-              saveHistoryEntry();
-            }
-
-            if (packet.type === "error") {
-              throw new Error(packet.message || "No se pudo conectar. Revisa tu conexión.");
-            }
-          }
-        }
-
-        if (!firstChunkArrived) {
-          skeleton.classList.remove("active");
-          setStatus("No se pudo generar contenido. Intenta de nuevo.", true);
-        }
       } catch (err) {
-        skeleton.classList.remove("active");
-        const humanMessage = err.message?.includes("demasiado largo")
-          ? "El texto es demasiado largo, prueba con un párrafo más corto."
-          : "No se pudo conectar. Revisa tu conexión.";
-        isRenderingProgrammatically = true;
-        output.textContent = humanMessage;
-        isRenderingProgrammatically = false;
-        setStatus(humanMessage, true);
+        output.textContent = "Error al generar el texto.";
         outputCharCount.textContent = "";
         similarityText.textContent = "";
       }
 
       btn.disabled = false;
       setParaphraseLabel(false);
-      persistSession();
-    });
-
-    clearAllBtn.addEventListener("click", () => {
-      input.value = "";
-      originalPreview.textContent = "";
-      latestVariants = { short: "", standard: "", creative: "" };
-      manualEdited = false;
-      isRenderingProgrammatically = true;
-      output.innerHTML = "";
-      isRenderingProgrammatically = false;
-      clearVisualStates();
-      updateInputCount();
-      persistSession();
     });
 
     copyBtn.addEventListener("click", async () => {
@@ -816,7 +465,7 @@
         setTimeout(() => {
           copyBtn.textContent = "Copy";
         }, 1200);
-      } catch {
+      } catch (err) {
         copyBtn.textContent = "Error";
         setTimeout(() => {
           copyBtn.textContent = "Copy";
@@ -824,5 +473,6 @@
       }
     });
   </script>
+
 </body>
 </html>
