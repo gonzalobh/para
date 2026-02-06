@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { word, context = "", tone = "Formal", mode = "Standard" } = req.body || {};
+    const { word, context = "", mode = "Standard" } = req.body || {};
     const safeWord = typeof word === "string" ? word.trim() : "";
     const safeContext = typeof context === "string" ? context.slice(0, 900) : "";
 
@@ -33,7 +33,7 @@ export default async function handler(req, res) {
           },
           {
             role: "user",
-            content: `palabra: \"${safeWord}\"\ncontexto: \"${safeContext}\"\ntono: \"${tone}\"\nmodo: \"${mode}\"\nFormato de salida OBLIGATORIO: JSON estricto:\n{\"synonyms\":[\"...\",\"...\",\"...\"]}`
+            content: `palabra: \"${safeWord}\"\ncontexto: \"${safeContext}\"\nmodo: \"${mode}\"\nFormato de salida OBLIGATORIO: JSON estricto:\n{\"synonyms\":[\"...\",\"...\",\"...\"]}`
           }
         ]
       })
