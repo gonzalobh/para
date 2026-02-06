@@ -1,7 +1,4 @@
 export default async function handler(req, res) {
-  // =========================
-  // CORS
-  // =========================
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -12,31 +9,43 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { messages } = req.body;
+    const { text, mode, tone, customInstruction } = req.body;
 
-    if (!messages || !Array.isArray(messages)) {
-      return res.status(400).json({ error: "messages inválido o ausente" });
+    if (!text) {
+      return res.status(400).json({ error: "Texto vacío" });
     }
 
-    const SYSTEM_PROMPT = `
-Eres un asistente experto en resumir textos.
+    const MODE_PROMPTS = {
+      Standard: "Parafrasea el texto manteniendo el significado original.",
+      Fluency: "Mejora la fluidez y naturalidad del texto.",
+      Humanizer: "Haz que el texto suene humano y natural.",
+      Simplify: "Simplifica el texto usando lenguaje sencillo.",
+      Creative: "Parafrasea el texto de forma creativa.",
+      Academic: "Parafrasea el texto con estilo académico.",
+      Shorten: "Parafrasea el texto haciéndolo más corto.",
+      Expand: "Parafrasea el texto ampliándolo.",
+      Rephraser: "Reformula el texto usando estructuras distintas.",
+      Custom: customInstruction || "Parafrasea el texto."
+    };
 
-OBJETIVO:
-- Entregar un resumen claro, corto y fiel al contenido original.
-- Eliminar redundancias.
-- Mantener las ideas clave.
-- No agregar opiniones ni información nueva.
+    const TONE_PROMPTS = {
+      Formal: "Usa un tono formal.",
+      Casual: "Usa un tono casual.",
+      Professional: "Usa un tono profesional.",
+      Witty: "Usa un tono ingenioso."
+    };
+
+    const SYSTEM_PROMPT = `
+Eres un asistente experto en parafrasear textos en español.
+
+${MODE_PROMPTS[mode] || MODE_PROMPTS.Standard}
+${TONE_PROMPTS[tone] || ""}
 
 REGLAS:
-- Usa lenguaje simple.
-- Máximo 1–2 párrafos.
-- Si el texto es muy largo, prioriza lo esencial.
+- No cambies el idioma.
+- No agregues información nueva.
+- Mantén el sentido original.
 `;
-
-    const fullMessages = [
-      { role: "system", content: SYSTEM_PROMPT },
-      ...messages,
-    ];
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -46,19 +55,22 @@ REGLAS:
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
-        messages: fullMessages,
-        temperature: 0.3,
+        messages: [
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: text }
+        ],
+        temperature: 0.6,
       }),
     });
 
     const data = await response.json();
 
-    return res.status(200).json({
-      message: data.choices[0].message.content,
+    res.status(200).json({
+      result: data.choices[0].message.content
     });
 
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Error interno del servidor" });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Error interno" });
   }
 }
