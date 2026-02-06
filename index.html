@@ -342,15 +342,10 @@
       <div id="editorPanel" class="tab-panel active">
         <div class="modes">
           <button data-mode="Standard" class="active">Estándar</button>
-          <button data-mode="Fluency">Fluidez</button>
-          <button data-mode="Humanizer">Humanizar</button>
-          <button data-mode="Simplify">Simplificar</button>
-          <button data-mode="Creative">Creativo</button>
-          <button data-mode="Academic">Académico</button>
           <button data-mode="Shorten">Acortar</button>
           <button data-mode="Expand">Expandir</button>
-          <button data-mode="Rephraser">Reformular</button>
-          <button data-mode="Custom">Personalizado</button>
+          <button data-mode="Simplify">Simplificar</button>
+          <button data-mode="Creative">Creativo</button>
         </div>
 
         <div class="editor">
@@ -400,6 +395,7 @@
 
   <script>
     let currentMode = "Standard";
+    const allowedModes = ["Standard", "Shorten", "Expand", "Simplify", "Creative"];
     const DIFF_TOKEN_LIMIT = 4000;
     const HISTORY_KEY = "para.history.v1";
     const HISTORY_MAX_ITEMS = 10;
@@ -596,8 +592,9 @@
     }
 
     function setActiveMode(mode) {
-      currentMode = mode;
-      modeButtons.forEach(button => button.classList.toggle("active", button.dataset.mode === mode));
+      const nextMode = allowedModes.includes(mode) ? mode : "Standard";
+      currentMode = nextMode;
+      modeButtons.forEach(button => button.classList.toggle("active", button.dataset.mode === nextMode));
     }
 
     function saveHistoryEntry(entry) {
