@@ -216,6 +216,40 @@
       padding: 6px 8px;
     }
 
+    .selection-toolbar {
+      position: fixed;
+      z-index: 1200;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.98);
+      border: 1px solid #eaeaea;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
+      border-radius: 999px;
+      padding: 8px 10px;
+    }
+
+    .selection-toolbar button {
+      border: none;
+      background: #111;
+      color: #fff;
+      border-radius: 999px;
+      padding: 8px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .selection-toolbar button:disabled {
+      opacity: .6;
+      cursor: not-allowed;
+    }
+
+    .selection-toolbar-msg {
+      font-size: 12px;
+      color: #666;
+      padding: 0 6px;
+    }
+
     .output-panel {
       position: relative;
     }
@@ -486,6 +520,11 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
 
+  <div id="selectionToolbar" class="selection-toolbar" hidden>
+    <button id="improveSelectionBtn" type="button">Mejorar claridad y corregir gramática</button>
+    <span id="selectionToolbarMsg" class="selection-toolbar-msg" hidden></span>
+  </div>
+
   <script>
     let currentMode = "Standard";
     const allowedModes = ["Standard", "Shorten", "Expand", "Simplify", "Creative"];
@@ -671,6 +710,9 @@
     const toggleChanges = document.getElementById("toggleChanges");
     const toggleStatus = document.getElementById("toggleStatus");
     const historyList = document.getElementById("historyList");
+    const selectionToolbar = document.getElementById("selectionToolbar");
+    const improveSelectionBtn = document.getElementById("improveSelectionBtn");
+    const selectionToolbarMsg = document.getElementById("selectionToolbarMsg");
 
     function switchToEditorTab() {
       tabButtons.forEach(button => button.classList.toggle("active", button.dataset.tab === "editorPanel"));
@@ -725,6 +767,163 @@
       toggleChanges.classList.toggle("active", diffViewEnabled);
       toggleChanges.setAttribute("aria-pressed", diffViewEnabled ? "true" : "false");
       updateExportButtons();
+    }
+
+    function hideSelectionToolbar() {
+      selectionToolbar.hidden = true;
+      setToolbarMessage("");
+      improveSelectionBtn.disabled = false;
+      improveSelectionBtn.hidden = false;
+      improveSelectionBtn.textContent = "Mejorar claridad y corregir gramática";
+    }
+
+    function isSelectionInsideOutput(sel) {
+      if (!sel || sel.rangeCount === 0) return false;
+      const range = sel.getRangeAt(0);
+      return output.contains(range.commonAncestorContainer);
+    }
+
+    function getSelectionRect(range) {
+      if (!range) return null;
+      const rect = range.getBoundingClientRect();
+      return (rect && (rect.width || rect.height)) ? rect : null;
+    }
+
+    function showSelectionToolbarAt(rect) {
+      if (!rect) return;
+      selectionToolbar.hidden = false;
+
+      const toolbarRect = selectionToolbar.getBoundingClientRect();
+      const margin = 8;
+      let left = rect.left + (rect.width / 2) - (toolbarRect.width / 2);
+      left = Math.max(margin, Math.min(left, window.innerWidth - toolbarRect.width - margin));
+
+      let top = rect.top - toolbarRect.height - margin;
+      if (top < margin) {
+        top = rect.bottom + margin;
+      }
+
+      top = Math.max(margin, Math.min(top, window.innerHeight - toolbarRect.height - margin));
+      selectionToolbar.style.left = `${Math.round(left)}px`;
+      selectionToolbar.style.top = `${Math.round(top)}px`;
+    }
+
+    function setToolbarMessage(text) {
+      const hasText = Boolean(text);
+      selectionToolbarMsg.hidden = !hasText;
+      selectionToolbarMsg.textContent = text || "";
+      improveSelectionBtn.hidden = hasText;
+    }
+
+    async function sseGetText(payload, options = {}) {
+      const timeoutMs = options.timeoutMs || 20000;
+      const controller = new AbortController();
+      let reader;
+      let timeoutId;
+      let streamTimedOut = false;
+
+      try {
+        timeoutId = setTimeout(() => {
+          streamTimedOut = true;
+          controller.abort();
+          if (reader) {
+            reader.cancel("timeout").catch(() => {});
+          }
+        }, timeoutMs);
+
+        const res = await fetch("/api/summary", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload),
+          signal: controller.signal
+        });
+
+        if (!res.ok || !res.body) {
+          throw new Error("request_failed");
+        }
+
+        reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let result = "";
+        let streamDone = false;
+
+        while (!streamDone) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split("\n\n");
+          buffer = events.pop() || "";
+
+          for (const eventBlock of events) {
+            const line = eventBlock.split("\n").find(lineItem => lineItem.startsWith("data:"));
+            if (!line) continue;
+
+            const payloadText = line.replace(/^data:\s*/, "");
+            if (!payloadText || payloadText === "[DONE]") continue;
+
+            const parsed = JSON.parse(payloadText);
+            if (parsed.type === "chunk" && parsed.text) {
+              result += parsed.text;
+            }
+            if (parsed.type === "error") {
+              throw new Error(parsed.message || "stream_error");
+            }
+            if (parsed.type === "done") {
+              streamDone = true;
+              break;
+            }
+          }
+        }
+
+        if (streamTimedOut) {
+          throw new Error("timeout");
+        }
+
+        return result;
+      } finally {
+        clearTimeout(timeoutId);
+        if (reader) {
+          reader.cancel().catch(() => {});
+        }
+      }
+    }
+
+    function onOutputSelectionChanged() {
+      if (!currentResultText.trim()) {
+        hideSelectionToolbar();
+        return;
+      }
+
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0 || sel.isCollapsed || !isSelectionInsideOutput(sel)) {
+        hideSelectionToolbar();
+        return;
+      }
+
+      const range = sel.getRangeAt(0);
+      const text = sel.toString().trim();
+      if (text.length < 10) {
+        hideSelectionToolbar();
+        return;
+      }
+
+      const rect = getSelectionRect(range);
+      if (!rect) {
+        hideSelectionToolbar();
+        return;
+      }
+
+      if (text.length > 1200) {
+        setToolbarMessage("Selecciona un texto más corto");
+      } else {
+        setToolbarMessage("");
+      }
+
+      showSelectionToolbarAt(rect);
     }
 
     function updateInputCount() {
@@ -1093,6 +1292,9 @@
     });
 
     output.addEventListener("click", onSynWordClick);
+    output.addEventListener("mouseup", onOutputSelectionChanged);
+    output.addEventListener("keyup", onOutputSelectionChanged);
+    document.addEventListener("selectionchange", onOutputSelectionChanged);
 
     document.addEventListener("click", (event) => {
       if (!synonymPopover) return;
@@ -1102,7 +1304,83 @@
     });
 
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") closeSynonymPopover();
+      if (event.key === "Escape") {
+        closeSynonymPopover();
+        hideSelectionToolbar();
+      }
+    });
+
+    document.addEventListener("click", (event) => {
+      if (selectionToolbar.hidden) return;
+      if (selectionToolbar.contains(event.target)) return;
+      if (output.contains(event.target)) return;
+      hideSelectionToolbar();
+    });
+
+    window.addEventListener("scroll", hideSelectionToolbar, true);
+    window.addEventListener("resize", hideSelectionToolbar);
+
+    improveSelectionBtn.addEventListener("click", async () => {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      if (!isSelectionInsideOutput(sel)) return;
+
+      const range = sel.getRangeAt(0);
+      const selectedText = sel.toString().trim();
+      if (selectedText.length < 10 || selectedText.length > 1200) return;
+
+      improveSelectionBtn.disabled = true;
+      improveSelectionBtn.textContent = "Mejorando…";
+
+      const instruction = `
+Corrige ortografía, gramática, puntuación y claridad con CAMBIOS MÍNIMOS.
+- Mantén exactamente el mismo significado.
+- NO agregues información nueva.
+- NO cambies el tono.
+- Devuelve SOLO el texto final, sin comillas, sin listas.
+`.trim();
+
+      try {
+        const improved = await sseGetText({
+          text: selectedText,
+          mode: "Custom",
+          customInstruction: instruction
+        });
+
+        const finalText = (improved || "").trim();
+        if (!finalText) throw new Error("empty");
+
+        range.deleteContents();
+        range.insertNode(document.createTextNode(finalText));
+
+        currentResultText = output.textContent || "";
+        currentDiff = buildDiffData(currentOriginalText, currentResultText);
+        diffViewEnabled = false;
+        isManualEdited = false;
+
+        applyOutputView();
+        outputCharCount.textContent = `${currentResultText.length} caracteres`;
+
+        const similarity = currentDiff?.totalCount
+          ? Math.round(100 - (currentDiff.addedCount / currentDiff.totalCount) * 100)
+          : 100;
+        similarityText.textContent = getSimilarityLabel(similarity);
+
+        if (currentDiff?.diffDisabled) {
+          disableDiffButton("Cambios no disponibles por longitud del texto");
+        } else {
+          enableDiffButton("");
+        }
+
+        updateExportButtons();
+        hideSelectionToolbar();
+      } catch (e) {
+        setToolbarMessage("No se pudo mejorar. Intenta otra vez.");
+        setTimeout(hideSelectionToolbar, 1200);
+      } finally {
+        improveSelectionBtn.disabled = false;
+        improveSelectionBtn.textContent = "Mejorar claridad y corregir gramática";
+      }
     });
 
     output.addEventListener("input", () => {
