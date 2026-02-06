@@ -35,25 +35,55 @@ export default async function handler(req, res) {
       return res.status(413).json({ error: "Texto demasiado largo" });
     }
 
+    // =========================
+    // MODE PROMPTS (AFILADOS)
+    // =========================
     const MODE_PROMPTS = {
-      Standard: "Parafrasea el texto manteniendo el significado original.",
-      Fluency: "Mejora la fluidez y naturalidad del texto.",
-      Humanizer: "Haz que el texto suene humano y natural.",
-      Simplify: "Simplifica el texto usando lenguaje sencillo.",
-      Creative: "Parafrasea el texto de forma creativa.",
-      Academic: "Parafrasea el texto con estilo académico.",
-      Shorten: `Parafrasea el texto de forma más breve.
-Reglas obligatorias para este modo:
+      Standard: `
+Reescribe el texto manteniendo el significado original.
+- Cambia vocabulario y orden de frases de forma leve.
+- NO agregues ni elimines información.
+- Mantén el tono y la estructura general.
+`,
+
+      Shorten: `
+Reescribe el texto de forma más breve.
+
+REGLAS OBLIGATORIAS:
 - El resultado DEBE tener MENOS caracteres que el texto original.
-- Objetivo de reducción: entre 20% y 40% de caracteres.
-- PROHIBIDO agregar información nueva.
-- PROHIBIDO agregar contexto adicional.
-- PROHIBIDO explicar o expandir ideas.
-- PRIORIDAD: eliminar redundancias y condensar frases.
-- Mantén hechos, nombres y datos exactamente.
-- Si no puedes acortarlo sin perder sentido, reduce mínimamente.`,
-      Expand: "Parafrasea el texto ampliándolo.",
-      Rephraser: "Reformula el texto usando estructuras distintas.",
+- Objetivo de reducción: entre 20% y 40%.
+- PROHIBIDO agregar información nueva o contexto adicional.
+- Elimina redundancias y frases accesorias.
+- Mantén hechos, nombres propios y datos exactamente.
+- Si no puedes acortarlo sin perder sentido, reduce mínimamente.
+`,
+
+      Expand: `
+Reescribe el texto ampliándolo de forma clara y coherente.
+- Desarrolla ideas implícitas.
+- Agrega contexto explicativo ligero, sin inventar hechos.
+- Mantén estilo informativo.
+- El resultado DEBE ser más largo que el texto original.
+`,
+
+      Simplify: `
+Simplifica el texto para que sea fácil de entender.
+- Usa frases cortas.
+- Usa vocabulario común.
+- Evita tecnicismos y subordinadas largas.
+- Nivel lector aproximado: educación secundaria.
+- Mantén el significado original sin agregar información.
+`,
+
+      Creative: `
+Reescribe el texto desde un ángulo distinto.
+- Cambia el punto de entrada del texto (no empieces igual).
+- Varía ritmo y estructura.
+- Puedes reorganizar el contenido.
+- NO inventes hechos ni datos.
+- El resultado debe sentirse claramente distinto al original.
+`,
+
       Custom: customInstruction || "Parafrasea el texto."
     };
 
@@ -64,19 +94,29 @@ Reglas obligatorias para este modo:
       Witty: "Usa un tono ingenioso."
     };
 
+    // =========================
+    // SYSTEM PROMPT
+    // =========================
     const SYSTEM_PROMPT = `
-Eres un asistente experto en parafrasear textos en español.
+Eres un asistente profesional especializado en reescritura y edición de textos en español.
+
+Tu tarea es ejecutar EXACTAMENTE el modo solicitado.
+Cada modo tiene un objetivo distinto y debes respetarlo estrictamente.
 
 ${MODE_PROMPTS[mode] || MODE_PROMPTS.Standard}
 ${TONE_PROMPTS[tone] || ""}
 
-REGLAS:
+REGLAS GENERALES:
 - Responde únicamente en español.
-- Mantén el sentido original.
-- No agregues explicaciones, comentarios ni formato extra.
-- Devuelve SOLO texto plano parafraseado (sin etiquetas HTML).
+- No expliques lo que haces.
+- No agregues comentarios ni aclaraciones.
+- No uses listas, títulos ni formato especial.
+- Devuelve SOLO el texto final reescrito, en texto plano.
 `;
 
+    // =========================
+    // OPENAI STREAMING
+    // =========================
     const upstreamResponse = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -86,11 +126,11 @@ REGLAS:
       body: JSON.stringify({
         model: "gpt-4o-mini",
         stream: true,
+        temperature: 0.6,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: text }
         ],
-        temperature: 0.6,
       }),
     });
 
@@ -113,9 +153,8 @@ REGLAS:
     let collectedText = "";
     const originalText = text;
     const isShortenMode = mode === "Shorten";
-    let reachedDoneMarker = false;
 
-    streamLoop: while (true) {
+    while (true) {
       const { done, value } = await reader.read();
       if (done) break;
 
@@ -128,11 +167,7 @@ REGLAS:
         if (!trimmed.startsWith("data:")) continue;
 
         const data = trimmed.replace(/^data:\s*/, "");
-
-        if (data === "[DONE]") {
-          reachedDoneMarker = true;
-          break streamLoop;
-        }
+        if (data === "[DONE]") break;
 
         try {
           const parsed = JSON.parse(data);
@@ -144,14 +179,10 @@ REGLAS:
               writeEvent({ type: "chunk", text: chunk });
             }
           }
-        } catch (parseError) {
-          console.error("Error parsing stream chunk", parseError);
+        } catch (err) {
+          console.error("Stream parse error:", err);
         }
       }
-    }
-
-    if (!reachedDoneMarker) {
-      buffer += decoder.decode();
     }
 
     if (!collectedText.trim()) {
@@ -160,6 +191,9 @@ REGLAS:
       return;
     }
 
+    // =========================
+    // SHORTEN VALIDATION
+    // =========================
     if (isShortenMode) {
       if (collectedText.length >= originalText.length) {
         writeEvent({
