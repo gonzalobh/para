@@ -42,9 +42,12 @@ ${MODE_PROMPTS[mode] || MODE_PROMPTS.Standard}
 ${TONE_PROMPTS[tone] || ""}
 
 REGLAS:
-- No cambies el idioma.
-- No agregues información nueva.
+- Responde únicamente en español.
 - Mantén el sentido original.
+- No agregues explicaciones, comentarios ni formato extra.
+- Si agregas palabras o expresiones que NO estaban en el texto original, envuelve cada agregado exactamente con: <span class="added">...</span>
+- No envuelvas palabras que ya existían en el texto original.
+- Devuelve SOLO el texto final parafraseado con esas etiquetas HTML cuando corresponda.
 `;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
