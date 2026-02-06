@@ -9,16 +9,19 @@ export default async function handler(req, res) {
   }
 
   let streamClosed = false;
+  let sseMode = false;
 
   const closeStream = () => {
-    if (streamClosed || !res.headersSent) return;
+    if (streamClosed) return;
     streamClosed = true;
-    res.end();
+    try { res.end(); } catch {}
   };
 
   const writeEvent = (payload) => {
-    if (streamClosed || !res.headersSent) return;
-    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    if (streamClosed) return;
+    try {
+      res.write(`data: ${JSON.stringify(payload)}\n\n`);
+    } catch {}
   };
 
   try {
@@ -91,6 +94,9 @@ REGLAS:
     res.setHeader("Content-Type", "text/event-stream; charset=utf-8");
     res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("Connection", "keep-alive");
+    sseMode = true;
+    res.flushHeaders?.();
+    res.write(":\n\n");
 
     const reader = upstreamResponse.body.getReader();
     const decoder = new TextDecoder();
@@ -139,11 +145,12 @@ REGLAS:
   } catch (err) {
     console.error(err);
 
-    if (!res.headersSent) {
+    if (!sseMode) {
       return res.status(500).json({ error: "Error interno" });
     }
 
     writeEvent({ type: "error", message: "No se pudo generar el texto. Intenta nuevamente." });
+    closeStream();
   } finally {
     closeStream();
   }
