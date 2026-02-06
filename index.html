@@ -111,9 +111,20 @@
     }
 
     .added {
-      color: #000;
+      color: #15c;
       font-weight: 500;
       opacity: 1;
+    }
+
+    .meta {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #8b8b8b;
+      line-height: 1.4;
+    }
+
+    .meta:empty {
+      display: none;
     }
 
     .copy-btn {
@@ -195,10 +206,13 @@
 
     <!-- TEXT AREAS -->
     <div class="editor">
-      <textarea
-        id="inputText"
-        placeholder="Ingresa el texto que quieres parafrasear..."
-      ></textarea>
+      <div>
+        <textarea
+          id="inputText"
+          placeholder="Ingresa el texto que quieres parafrasear..."
+        ></textarea>
+        <div id="inputCharCount" class="meta">0 caracteres</div>
+      </div>
 
       <div class="output-panel">
         <div
@@ -206,6 +220,8 @@
           class="output"
           data-placeholder="Aquí aparecerá el texto parafraseado"
         ></div>
+        <div id="outputCharCount" class="meta"></div>
+        <div id="similarityText" class="meta"></div>
         <button id="copyOutput" class="copy-btn" type="button" aria-label="Copiar salida">Copy</button>
       </div>
     </div>
@@ -281,9 +297,17 @@
       const origTokens = tokenize(originalText).filter(t => !/^\s+$/.test(t));
       const outTokens = tokenize(paraphrasedText).filter(t => !/^\s+$/.test(t));
 
-      if (!outTokens.length) return "";
+      if (!outTokens.length) {
+        return { html: "", addedCount: 0, totalCount: 0, diffDisabled: false };
+      }
+
       if (origTokens.length + outTokens.length > DIFF_TOKEN_LIMIT) {
-        return escapeHtml(paraphrasedText);
+        return {
+          html: escapeHtml(paraphrasedText),
+          addedCount: 0,
+          totalCount: 0,
+          diffDisabled: true
+        };
       }
 
       const n = origTokens.length;
@@ -322,7 +346,15 @@
         j++;
       }
 
-      return renderTokens(rendered);
+      const addedCount = rendered.filter(token => token.added).length;
+      const totalCount = rendered.length;
+
+      return {
+        html: renderTokens(rendered),
+        addedCount,
+        totalCount,
+        diffDisabled: false
+      };
     }
 
     const modeButtons = document.querySelectorAll(".modes button");
@@ -331,10 +363,20 @@
     const tone = document.getElementById("tone");
     const btn = document.getElementById("paraphrase");
     const copyBtn = document.getElementById("copyOutput");
+    const inputCharCount = document.getElementById("inputCharCount");
+    const outputCharCount = document.getElementById("outputCharCount");
+    const similarityText = document.getElementById("similarityText");
 
     function setParaphraseLabel(isLoading) {
       btn.textContent = isLoading ? "Parafraseando…" : "✨ Parafrasear";
     }
+
+    function updateInputCount() {
+      inputCharCount.textContent = `${input.value.length} caracteres`;
+    }
+
+    updateInputCount();
+    input.addEventListener("input", updateInputCount);
 
     modeButtons.forEach(btnMode => {
       btnMode.addEventListener("click", () => {
@@ -351,6 +393,8 @@
       btn.disabled = true;
       setParaphraseLabel(true);
       output.innerHTML = "";
+      outputCharCount.textContent = "";
+      similarityText.textContent = "";
 
       try {
         const res = await fetch("/api/summary", {
@@ -366,12 +410,25 @@
         });
 
         const data = await res.json();
-        output.innerHTML = data.result
-          ? highlightAddedWords(text, data.result)
-          : "No se pudo generar el texto.";
+        if (data.result) {
+          const { html, addedCount, totalCount, diffDisabled } = highlightAddedWords(text, data.result);
+          output.innerHTML = html;
+
+          if (!diffDisabled) {
+            outputCharCount.textContent = `${data.result.length} caracteres`;
+            const similarity = totalCount
+              ? Math.round(100 - (addedCount / totalCount) * 100)
+              : 100;
+            similarityText.textContent = `Similitud: ${similarity}%`;
+          }
+        } else {
+          output.textContent = "No se pudo generar el texto.";
+        }
 
       } catch (err) {
         output.textContent = "Error al generar el texto.";
+        outputCharCount.textContent = "";
+        similarityText.textContent = "";
       }
 
       btn.disabled = false;
