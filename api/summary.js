@@ -1,3 +1,43 @@
+const MIN_FIDELITY = 85;
+
+// Calcula la similitud del coseno entre dos vectores.
+function cosineSimilarity(vectorA, vectorB) {
+  const dotProduct = vectorA.reduce((acc, value, index) => acc + value * vectorB[index], 0);
+  const magnitudeA = Math.sqrt(vectorA.reduce((acc, value) => acc + value * value, 0));
+  const magnitudeB = Math.sqrt(vectorB.reduce((acc, value) => acc + value * value, 0));
+
+  if (!magnitudeA || !magnitudeB) {
+    return 0;
+  }
+
+  const similarity = dotProduct / (magnitudeA * magnitudeB);
+  return Math.min(1, Math.max(0, similarity));
+}
+
+// Genera embeddings y devuelve score + estado de fidelidad semántica.
+async function calculateSemanticFidelity(originalText, paraphrasedText) {
+  const embeddingResponse = await fetch("https://api.openai.com/v1/embeddings", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+    },
+    body: JSON.stringify({
+      model: "text-embedding-3-small",
+      input: [originalText, paraphrasedText],
+    }),
+  });
+
+  const embeddingData = await embeddingResponse.json();
+  const [originalEmbedding, paraphrasedEmbedding] = embeddingData.data.map((item) => item.embedding);
+
+  const similarity = cosineSimilarity(originalEmbedding, paraphrasedEmbedding);
+  const fidelityScore = Math.round(similarity * 100);
+  const fidelityStatus = fidelityScore < MIN_FIDELITY ? "lowConfidence" : "ok";
+
+  return { fidelityScore, fidelityStatus };
+}
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
@@ -65,9 +105,14 @@ REGLAS:
     });
 
     const data = await response.json();
+    const paraphrasedText = data.choices[0].message.content;
+    const { fidelityScore, fidelityStatus } = await calculateSemanticFidelity(text, paraphrasedText);
 
     res.status(200).json({
-      result: data.choices[0].message.content
+      text: paraphrasedText,
+      result: paraphrasedText,
+      fidelityScore,
+      fidelityStatus,
     });
 
   } catch (err) {
