@@ -36,52 +36,44 @@ export default async function handler(req, res) {
     }
 
     // =========================
-    // MODE PROMPTS (AFILADOS)
+    // MODE PROMPTS
     // =========================
     const MODE_PROMPTS = {
       Standard: `
-Reescribe el texto manteniendo el significado original.
-- Cambia vocabulario y orden de frases de forma leve.
+Reescribe el texto manteniendo exactamente el mismo significado.
+- Cambia vocabulario y orden de frases.
 - NO agregues ni elimines información.
-- Mantén el tono y la estructura general.
+- Mantén todos los hechos y datos intactos.
 `,
 
       Shorten: `
 Reescribe el texto de forma más breve.
-
-REGLAS OBLIGATORIAS:
-- El resultado DEBE tener MENOS caracteres que el texto original.
-- Objetivo de reducción: entre 20% y 40%.
-- PROHIBIDO agregar información nueva o contexto adicional.
-- Elimina redundancias y frases accesorias.
-- Mantén hechos, nombres propios y datos exactamente.
-- Si no puedes acortarlo sin perder sentido, reduce mínimamente.
+- El resultado DEBE ser más corto que el original.
+- Elimina redundancias.
+- NO elimines hechos ni información relevante.
+- NO agregues información nueva.
 `,
 
       Expand: `
-Reescribe el texto ampliándolo de forma clara y coherente.
-- Desarrolla ideas implícitas.
-- Agrega contexto explicativo ligero, sin inventar hechos.
-- Mantén estilo informativo.
-- El resultado DEBE ser más largo que el texto original.
+Reescribe el texto con una redacción ligeramente más desarrollada.
+- Mejora fluidez y cohesión.
+- NO agregues contexto, explicaciones ni hechos nuevos.
+- No cambies el foco del texto.
 `,
 
       Simplify: `
-Simplifica el texto para que sea fácil de entender.
-- Usa frases cortas.
+Reescribe el texto de forma más simple y clara.
+- Usa frases más cortas.
 - Usa vocabulario común.
-- Evita tecnicismos y subordinadas largas.
-- Nivel lector aproximado: educación secundaria.
-- Mantén el significado original sin agregar información.
+- Mantén exactamente el mismo contenido informativo.
+- NO agregues ejemplos ni explicaciones.
 `,
 
       Creative: `
-Reescribe el texto desde un ángulo distinto.
-- Cambia el punto de entrada del texto (no empieces igual).
-- Varía ritmo y estructura.
-- Puedes reorganizar el contenido.
-- NO inventes hechos ni datos.
-- El resultado debe sentirse claramente distinto al original.
+Reescribe el texto con variación estilística.
+- Cambia estructura y ritmo.
+- Mantén exactamente los mismos hechos e información.
+- NO agregues contexto ni interpretaciones.
 `,
 
       Custom: customInstruction || "Parafrasea el texto."
@@ -98,20 +90,36 @@ Reescribe el texto desde un ángulo distinto.
     // SYSTEM PROMPT
     // =========================
     const SYSTEM_PROMPT = `
-Eres un asistente profesional especializado en reescritura y edición de textos en español.
+Eres un editor profesional especializado exclusivamente en PARAFRASEO FIEL de textos en español.
 
-Tu tarea es ejecutar EXACTAMENTE el modo solicitado.
-Cada modo tiene un objetivo distinto y debes respetarlo estrictamente.
+REGLA CRÍTICA (NO NEGOCIABLE):
+- Está TERMINANTEMENTE PROHIBIDO agregar información nueva.
+- NO inventes contexto, causas, consecuencias, intenciones, interpretaciones ni explicaciones.
+- Si un dato, idea o matiz NO está explícitamente presente en el texto original, NO debe aparecer en el resultado.
 
+Tu único objetivo es expresar EXACTAMENTE las mismas ideas, hechos y datos,
+usando palabras y estructuras distintas.
+
+MODO DE REESCRITURA:
 ${MODE_PROMPTS[mode] || MODE_PROMPTS.Standard}
+
+TONO:
 ${TONE_PROMPTS[tone] || ""}
 
-REGLAS GENERALES:
-- Responde únicamente en español.
-- No expliques lo que haces.
-- No agregues comentarios ni aclaraciones.
-- No uses listas, títulos ni formato especial.
-- Devuelve SOLO el texto final reescrito, en texto plano.
+REGLAS OBLIGATORIAS:
+- Mantén todos los nombres propios, cifras, lugares y hechos.
+- No cambies el foco del texto.
+- No embellezcas ni editorialices.
+- No agregues adjetivos interpretativos.
+- No resumas salvo que el modo sea "Shorten".
+- No repitas ideas ni infles el texto.
+- Devuelve SOLO el texto final.
+- Texto plano, sin listas, sin títulos.
+- Español neutro.
+
+VALIDACIÓN IMPLÍCITA DE CALIDAD:
+Si no puedes cumplir un modo sin agregar información,
+prioriza SIEMPRE la fidelidad semántica por encima de la creatividad o expansión.
 `;
 
     // =========================
@@ -124,9 +132,9 @@ REGLAS GENERALES:
         Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
-        model: "gpt-4o-mini",
+        model: "gpt-4o",
         stream: true,
-        temperature: 0.6,
+        temperature: 0.2,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: text }
