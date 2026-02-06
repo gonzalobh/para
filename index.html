@@ -725,6 +725,12 @@
       const text = input.value.trim();
       if (!text) return;
 
+      const STREAM_TIMEOUT_MS = 25000;
+      const controller = new AbortController();
+      let reader;
+      let timeoutId;
+      let streamTimedOut = false;
+
       btn.disabled = true;
       setParaphraseLabel(true);
       outputCharCount.textContent = "";
@@ -739,6 +745,14 @@
       showSkeleton();
 
       try {
+        timeoutId = setTimeout(() => {
+          streamTimedOut = true;
+          controller.abort();
+          if (reader) {
+            reader.cancel("timeout").catch(() => {});
+          }
+        }, STREAM_TIMEOUT_MS);
+
         const res = await fetch("/api/summary", {
           method: "POST",
           headers: {
@@ -748,7 +762,8 @@
             text,
             mode: currentMode,
             tone: tone.value
-          })
+          }),
+          signal: controller.signal
         });
 
         if (!res.ok || !res.body) {
@@ -758,11 +773,12 @@
           throw new Error("No se pudo generar el texto. Intenta nuevamente.");
         }
 
-        const reader = res.body.getReader();
+        reader = res.body.getReader();
         const decoder = new TextDecoder();
         let buffer = "";
+        let streamDone = false;
 
-        while (true) {
+        while (!streamDone) {
           const { value, done } = await reader.read();
           if (done) break;
 
@@ -770,37 +786,42 @@
           const events = buffer.split("\n\n");
           buffer = events.pop() || "";
 
-          events.forEach(eventBlock => {
+          for (const eventBlock of events) {
             const line = eventBlock
               .split("\n")
               .find(lineItem => lineItem.startsWith("data:"));
 
-            if (!line) return;
+            if (!line) continue;
 
             const payloadText = line.replace(/^data:\s*/, "");
-            if (!payloadText || payloadText === "[DONE]") return;
+            if (!payloadText || payloadText === "[DONE]") continue;
 
-            try {
-              const payload = JSON.parse(payloadText);
+            const payload = JSON.parse(payloadText);
 
-              if (payload.type === "chunk" && payload.text) {
-                currentResultText += payload.text;
+            if (payload.type === "chunk" && payload.text) {
+              currentResultText += payload.text;
 
-                if (!hasReceivedFirstChunk) {
-                  hasReceivedFirstChunk = true;
-                }
-
-                setOutputHtml(escapeHtml(currentResultText));
-                outputCharCount.textContent = `${currentResultText.length} caracteres`;
+              if (!hasReceivedFirstChunk) {
+                hasReceivedFirstChunk = true;
               }
 
-              if (payload.type === "error") {
-                throw new Error(payload.message || "No se pudo generar el texto. Intenta nuevamente.");
-              }
-            } catch (error) {
-              throw error;
+              setOutputHtml(escapeHtml(currentResultText));
+              outputCharCount.textContent = `${currentResultText.length} caracteres`;
             }
-          });
+
+            if (payload.type === "error") {
+              throw new Error(payload.message || "No se pudo generar el texto. Intenta nuevamente.");
+            }
+
+            if (payload.type === "done") {
+              streamDone = true;
+              break;
+            }
+          }
+        }
+
+        if (streamTimedOut) {
+          throw new Error("La generación tardó demasiado. Intenta nuevamente.");
         }
 
         if (!currentResultText.trim()) {
@@ -830,16 +851,25 @@
           timestamp: Date.now()
         });
       } catch (err) {
-        const message = err?.message === "El texto es demasiado largo, intenta con un párrafo más corto."
+        const isTooLongError = err?.message === "El texto es demasiado largo, intenta con un párrafo más corto.";
+        const isTimeoutError = streamTimedOut || err?.name === "AbortError";
+        const message = isTooLongError
           ? err.message
-          : "No se pudo generar el texto. Intenta nuevamente.";
+          : isTimeoutError
+            ? "La generación tardó demasiado. Reintenta en unos segundos."
+            : "No se pudo generar el texto. Intenta nuevamente.";
+
         setOutputHtml(escapeHtml(message));
         outputCharCount.textContent = "";
         similarityText.textContent = "";
+      } finally {
+        clearTimeout(timeoutId);
+        if (reader) {
+          reader.cancel().catch(() => {});
+        }
+        btn.disabled = false;
+        setParaphraseLabel(false);
       }
-
-      btn.disabled = false;
-      setParaphraseLabel(false);
     });
 
     copyBtn.addEventListener("click", async () => {

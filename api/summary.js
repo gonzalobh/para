@@ -8,6 +8,19 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Método no permitido" });
   }
 
+  let streamClosed = false;
+
+  const closeStream = () => {
+    if (streamClosed || !res.headersSent) return;
+    streamClosed = true;
+    res.end();
+  };
+
+  const writeEvent = (payload) => {
+    if (streamClosed || !res.headersSent) return;
+    res.write(`data: ${JSON.stringify(payload)}\n\n`);
+  };
+
   try {
     const { text, mode, tone, customInstruction } = req.body || {};
 
@@ -84,10 +97,6 @@ REGLAS:
     let buffer = "";
     let collectedText = "";
 
-    const writeEvent = (payload) => {
-      res.write(`data: ${JSON.stringify(payload)}\n\n`);
-    };
-
     while (true) {
       const { done, value } = await reader.read();
       if (done) break;
@@ -104,7 +113,7 @@ REGLAS:
 
         if (data === "[DONE]") {
           writeEvent({ type: "done" });
-          res.end();
+          closeStream();
           return;
         }
 
@@ -124,11 +133,9 @@ REGLAS:
 
     if (!collectedText.trim()) {
       writeEvent({ type: "error", message: "No se pudo generar el texto. Intenta nuevamente." });
-    } else {
-      writeEvent({ type: "done" });
     }
 
-    res.end();
+    writeEvent({ type: "done" });
   } catch (err) {
     console.error(err);
 
@@ -136,7 +143,8 @@ REGLAS:
       return res.status(500).json({ error: "Error interno" });
     }
 
-    res.write(`data: ${JSON.stringify({ type: "error", message: "No se pudo generar el texto. Intenta nuevamente." })}\n\n`);
-    res.end();
+    writeEvent({ type: "error", message: "No se pudo generar el texto. Intenta nuevamente." });
+  } finally {
+    closeStream();
   }
 }
