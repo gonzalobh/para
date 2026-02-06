@@ -177,6 +177,102 @@
   <script>
     let currentMode = "Standard";
 
+    const DIFF_TOKEN_LIMIT = 4000;
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function tokenize(text) {
+      return (text.match(/\p{L}[\p{L}\p{N}_'-]*|\p{N}+|[^\s\p{L}\p{N}]|\s+/gu) || []);
+    }
+
+    function shouldJoinWithoutSpace(prev, curr) {
+      if (!prev || !curr) return false;
+      if (/^\s+$/.test(curr) || /^\s+$/.test(prev)) return false;
+
+      const closers = /^[.,;:!?%)\]»”’]+$/;
+      const openers = /^[(\[{«“‘¿¡]+$/;
+      const apostropheLike = /^[’']$/;
+
+      return closers.test(curr) || openers.test(prev) || apostropheLike.test(curr) || apostropheLike.test(prev);
+    }
+
+    function renderTokens(tokens) {
+      let html = "";
+
+      tokens.forEach((token, i) => {
+        const raw = token.value;
+        if (!raw) return;
+
+        const escaped = escapeHtml(raw);
+        const wrapped = token.added
+          ? `<span class="added">${escaped}</span>`
+          : escaped;
+
+        if (i > 0 && !shouldJoinWithoutSpace(tokens[i - 1].value, raw)) {
+          html += " ";
+        }
+
+        html += wrapped;
+      });
+
+      return html;
+    }
+
+    function highlightAddedWords(originalText, paraphrasedText) {
+      const origTokens = tokenize(originalText).filter(t => !/^\s+$/.test(t));
+      const outTokens = tokenize(paraphrasedText).filter(t => !/^\s+$/.test(t));
+
+      if (!outTokens.length) return "";
+      if (origTokens.length + outTokens.length > DIFF_TOKEN_LIMIT) {
+        return escapeHtml(paraphrasedText);
+      }
+
+      const n = origTokens.length;
+      const m = outTokens.length;
+      const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+
+      for (let i = n - 1; i >= 0; i--) {
+        for (let j = m - 1; j >= 0; j--) {
+          if (origTokens[i] === outTokens[j]) {
+            dp[i][j] = dp[i + 1][j + 1] + 1;
+          } else {
+            dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+          }
+        }
+      }
+
+      const rendered = [];
+      let i = 0;
+      let j = 0;
+
+      while (i < n && j < m) {
+        if (origTokens[i] === outTokens[j]) {
+          rendered.push({ value: outTokens[j], added: false });
+          i++;
+          j++;
+        } else if (dp[i][j + 1] >= dp[i + 1][j]) {
+          rendered.push({ value: outTokens[j], added: true });
+          j++;
+        } else {
+          i++;
+        }
+      }
+
+      while (j < m) {
+        rendered.push({ value: outTokens[j], added: true });
+        j++;
+      }
+
+      return renderTokens(rendered);
+    }
+
     const modeButtons = document.querySelectorAll(".modes button");
     const input = document.getElementById("inputText");
     const output = document.getElementById("outputText");
@@ -213,7 +309,9 @@
         });
 
         const data = await res.json();
-        output.innerHTML = data.result || "No se pudo generar el texto.";
+        output.innerHTML = data.result
+          ? highlightAddedWords(text, data.result)
+          : "No se pudo generar el texto.";
 
       } catch (err) {
         output.textContent = "Error al generar el texto.";
