@@ -414,11 +414,12 @@
     let currentDiff = null;
 
     function escapeHtml(str) {
+      if (typeof str !== "string") return "";
       return str
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
         .replace(/>/g, "&gt;")
-        .replace(/\"/g, "&quot;")
+        .replace(/"/g, "&quot;")
         .replace(/'/g, "&#39;");
     }
 
@@ -632,21 +633,26 @@
       }
 
       items.forEach((item, index) => {
+        const safeResult = typeof item.result === "string" ? item.result : "";
+        const safeMode = item.mode || "Standard";
+        const safeTone = item.tone || "Formal";
+        const safeOriginal = typeof item.original === "string" ? item.original : "";
+
         const li = document.createElement("li");
         li.className = "history-item";
         li.innerHTML = `
-          <p class="history-item-title">${escapeHtml(formatTimestamp(item.timestamp))} · ${escapeHtml(item.mode)} · ${escapeHtml(item.tone)}</p>
-          <p class="history-item-text">${escapeHtml(item.result.slice(0, 160))}${item.result.length > 160 ? "…" : ""}</p>
+          <p class="history-item-title">${escapeHtml(formatTimestamp(item.timestamp))} · ${escapeHtml(safeMode)} · ${escapeHtml(safeTone)}</p>
+          <p class="history-item-text">${escapeHtml(safeResult.slice(0, 160))}${safeResult.length > 160 ? "…" : ""}</p>
         `;
 
         li.addEventListener("click", () => {
-          input.value = item.original;
+          input.value = safeOriginal;
           updateInputCount();
-          tone.value = item.tone;
-          setActiveMode(item.mode);
+          tone.value = safeTone;
+          setActiveMode(safeMode);
 
-          currentOriginalText = item.original;
-          currentResultText = item.result;
+          currentOriginalText = safeOriginal;
+          currentResultText = safeResult;
           currentDiff = buildDiffData(currentOriginalText, currentResultText);
 
           isManualEdited = false;
@@ -659,7 +665,7 @@
             enableDiffButton("");
           }
 
-          outputCharCount.textContent = `${item.result.length} caracteres`;
+          outputCharCount.textContent = `${safeResult.length} caracteres`;
           const similarity = currentDiff.totalCount
             ? Math.round(100 - (currentDiff.addedCount / currentDiff.totalCount) * 100)
             : 100;
