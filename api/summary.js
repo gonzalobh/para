@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   };
 
   try {
-    const { text, mode, tone, customInstruction } = req.body || {};
+    const { text, mode, customInstruction } = req.body || {};
 
     if (!text || !text.trim()) {
       return res.status(400).json({ error: "Texto vacío" });
@@ -79,13 +79,6 @@ Reescribe el texto con variación estilística.
       Custom: customInstruction || "Parafrasea el texto."
     };
 
-    const TONE_PROMPTS = {
-      Formal: "Usa un tono formal.",
-      Casual: "Usa un tono casual.",
-      Professional: "Usa un tono profesional.",
-      Witty: "Usa un tono ingenioso."
-    };
-
     // =========================
     // SYSTEM PROMPT
     // =========================
@@ -103,8 +96,6 @@ usando palabras y estructuras distintas.
 MODO DE REESCRITURA:
 ${MODE_PROMPTS[mode] || MODE_PROMPTS.Standard}
 
-TONO:
-${TONE_PROMPTS[tone] || ""}
 
 REGLAS OBLIGATORIAS:
 - Mantén todos los nombres propios, cifras, lugares y hechos.

@@ -168,6 +168,13 @@
 
     .syn-word {
       cursor: pointer;
+      border-radius: 8px;
+      padding: 1px 4px;
+      transition: background-color 0.15s ease;
+    }
+
+    .syn-word:hover {
+      background: rgba(11, 87, 208, 0.12);
     }
 
     .synonym-popover {
@@ -355,7 +362,7 @@
 
     .controls {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: center;
       margin-top: 16px;
       gap: 16px;
@@ -440,17 +447,7 @@
         </div>
 
         <div class="controls">
-          <div>
-            <label for="tone">Tono:</label><br />
-            <select id="tone">
-              <option value="Formal">Formal</option>
-              <option value="Casual">Casual</option>
-              <option value="Professional">Professional</option>
-              <option value="Witty">Witty</option>
-            </select>
-          </div>
-
-          <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
+            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
             <button id="downloadPdf" type="button" class="secondary-btn" disabled>Descargar PDF</button>
             <button id="downloadDocx" type="button" class="secondary-btn" disabled>Descargar Word</button>
             <button id="paraphrase">Parafrasear</button>
@@ -631,7 +628,6 @@
     const input = document.getElementById("inputText");
     const output = document.getElementById("outputText");
     const editor = document.querySelector(".editor");
-    const tone = document.getElementById("tone");
     const btn = document.getElementById("paraphrase");
     const copyBtn = document.getElementById("copyOutput");
     const downloadPdfBtn = document.getElementById("downloadPdf");
@@ -740,20 +736,18 @@
       items.forEach((item) => {
         const safeResult = typeof item.result === "string" ? item.result : "";
         const safeMode = item.mode || "Standard";
-        const safeTone = item.tone || "Formal";
         const safeOriginal = typeof item.original === "string" ? item.original : "";
 
         const li = document.createElement("li");
         li.className = "history-item";
         li.innerHTML = `
-          <p class="history-item-title">${escapeHtml(formatTimestamp(item.timestamp))} · ${escapeHtml(safeMode)} · ${escapeHtml(safeTone)}</p>
+          <p class="history-item-title">${escapeHtml(formatTimestamp(item.timestamp))} · ${escapeHtml(safeMode)}</p>
           <p class="history-item-text">${escapeHtml(safeResult.slice(0, 160))}${safeResult.length > 160 ? "…" : ""}</p>
         `;
 
         li.addEventListener("click", () => {
           input.value = safeOriginal;
           updateInputCount();
-          tone.value = safeTone;
           setActiveMode(safeMode);
 
           currentOriginalText = safeOriginal;
@@ -847,7 +841,7 @@
         const response = await fetch("/api/synonyms", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ word, context, tone: tone.value, mode: currentMode }),
+          body: JSON.stringify({ word, context, mode: currentMode }),
           signal: synonymController.signal
         });
         const data = await response.json().catch(() => ({ synonyms: [] }));
@@ -1126,8 +1120,7 @@
           },
           body: JSON.stringify({
             text,
-            mode: currentMode,
-            tone: tone.value
+            mode: currentMode
           }),
           signal: controller.signal
         });
@@ -1214,7 +1207,6 @@
           original: currentOriginalText,
           result: currentResultText,
           mode: currentMode,
-          tone: tone.value,
           timestamp: Date.now()
         });
       } catch (err) {
