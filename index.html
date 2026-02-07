@@ -148,7 +148,7 @@
     }
 
     textarea {
-      resize: vertical;
+      resize: none;
       color: #111;
     }
 
@@ -396,6 +396,10 @@
       flex-wrap: wrap;
     }
 
+    .paraphrase-controls {
+      margin-top: 12px;
+    }
+
     select {
       padding: 8px 12px;
       border-radius: 8px;
@@ -457,7 +461,7 @@
               <textarea id="inputText" placeholder="Ingresa el texto que quieres parafrasear..."></textarea>
               <button id="copyInput" class="copy-btn" type="button" aria-label="Copiar entrada">Copiar</button>
             </div>
-            <div class="controls" style="justify-content:flex-start; margin-top:12px;">
+            <div class="controls paraphrase-controls">
               <button id="paraphrase">Parafrasear</button>
             </div>
             <div id="inputCharCount" class="meta">0 caracteres</div>
@@ -572,6 +576,7 @@
 
     function renderTokens(tokens, mode) {
       let html = "";
+      const punctuationTokenRegex = /^[.,;:!?]+$/;
       tokens.forEach((token, i) => {
         if (!token?.value) return;
 
@@ -603,7 +608,8 @@
           }
         }
 
-        if (html.length > 0 && !shouldJoinWithoutSpace(tokens[i - 1]?.value, token.value)) {
+        const isPunctuationToken = punctuationTokenRegex.test(token.value);
+        if (html.length > 0 && !isPunctuationToken && !shouldJoinWithoutSpace(tokens[i - 1]?.value, token.value)) {
           html += " ";
         }
 
