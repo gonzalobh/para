@@ -425,38 +425,6 @@
       }
     }
 
-    /* ===== Style Brush (Pincel de Estilo) ===== */
-    .stylebrush-menu{
-      position: fixed;
-      z-index: 2000;
-      display: none;
-      gap: 8px;
-      padding: 8px;
-      border-radius: 14px;
-      border: 1px solid #eaeaea;
-      background: rgba(255,255,255,0.98);
-      box-shadow: 0 14px 30px rgba(0,0,0,0.14);
-      backdrop-filter: blur(6px);
-      align-items: center;
-    }
-    .stylebrush-menu button{
-      border: none;
-      border-radius: 999px;
-      padding: 8px 12px;
-      font-size: 13px;
-      cursor: pointer;
-      background: #f5f5f5;
-      color: #111;
-      transition: background-color .15s ease;
-    }
-    .stylebrush-menu button:hover{ background:#eef4ff; }
-    .stylebrush-menu button:disabled{ opacity:.6; cursor:not-allowed; }
-    .stylebrush-status{
-      font-size: 12px;
-      color:#666;
-      padding: 0 6px;
-      white-space: nowrap;
-    }
   </style>
 </head>
 <body>
@@ -516,12 +484,6 @@
         <ul id="historyList" class="history-list"></ul>
       </div>
     </div>
-  </div>
-
-  <div id="styleBrushMenu" class="stylebrush-menu">
-    <button type="button" id="brushSimplify">Simplificar</button>
-    <button type="button" id="brushProfessional">Más profesional</button>
-    <span id="brushStatus" class="stylebrush-status"></span>
   </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.11.0/mammoth.browser.min.js"></script>
@@ -702,123 +664,6 @@
     const tabButtons = document.querySelectorAll(".tab-btn");
     const input = document.getElementById("inputText");
     const inputText = input;
-    const styleBrushMenu = document.getElementById("styleBrushMenu");
-    const brushSimplifyBtn = document.getElementById("brushSimplify");
-    const brushProfessionalBtn = document.getElementById("brushProfessional");
-    const brushStatus = document.getElementById("brushStatus");
-
-    let lastMouseX = 0;
-    let lastMouseY = 0;
-
-    function setBrushLoading(isLoading, msg = "") {
-      brushSimplifyBtn.disabled = isLoading;
-      brushProfessionalBtn.disabled = isLoading;
-      brushStatus.textContent = msg;
-    }
-
-    function hideStyleBrush() {
-      styleBrushMenu.style.display = "none";
-      setBrushLoading(false, "");
-    }
-
-    function showStyleBrush(x, y) {
-      styleBrushMenu.style.left = `${x}px`;
-      styleBrushMenu.style.top = `${y - 50}px`;
-      styleBrushMenu.style.display = "inline-flex";
-    }
-
-    function getSelectionData() {
-      const start = inputText.selectionStart;
-      const end = inputText.selectionEnd;
-      if (end <= start) return null;
-
-      const full = inputText.value;
-      const selected = full.slice(start, end);
-      if (!selected.trim()) return null;
-
-      return { start, end, selected, full };
-    }
-
-    async function applyStyle(effect) {
-      if (isManualEdited) return;
-
-      const sel = getSelectionData();
-      if (!sel) return;
-
-      setBrushLoading(true, "Aplicando…");
-
-      try {
-        const res = await fetch("/api/stylebrush", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            effect,
-            selectedText: sel.selected,
-            before: sel.full.slice(Math.max(0, sel.start - 500), sel.start),
-            after: sel.full.slice(sel.end, sel.end + 500)
-          })
-        });
-
-        const data = await res.json();
-        if (!data.replacement) throw new Error();
-
-        const baseText = currentResultText || inputText.value;
-
-        const newText =
-          baseText.slice(0, sel.start) +
-          data.replacement +
-          baseText.slice(sel.end);
-
-        currentOriginalText = inputText.value;
-        currentResultText = newText;
-        currentDiff = buildDiffData(currentOriginalText, currentResultText);
-
-        diffViewEnabled = false;
-        isManualEdited = false;
-
-        applyOutputView();
-        outputCharCount.textContent = `${currentResultText.length} caracteres`;
-
-        const similarity = currentDiff.totalCount
-          ? Math.round(100 - (currentDiff.addedCount / currentDiff.totalCount) * 100)
-          : 100;
-
-        similarityText.textContent = getSimilarityLabel(similarity);
-
-        hideStyleBrush();
-
-      } catch {
-        setBrushLoading(false, "Error");
-        setTimeout(() => setBrushLoading(false, ""), 1000);
-      }
-    }
-
-    inputText.addEventListener("mousedown", e => {
-      lastMouseX = e.clientX;
-      lastMouseY = e.clientY;
-    });
-
-    inputText.addEventListener("mouseup", e => {
-      lastMouseX = e.clientX;
-      lastMouseY = e.clientY;
-
-      const sel = getSelectionData();
-      if (!sel) return hideStyleBrush();
-      showStyleBrush(lastMouseX, lastMouseY);
-    });
-
-    brushSimplifyBtn.onclick = () => applyStyle("simplify");
-    brushProfessionalBtn.onclick = () => applyStyle("professional");
-
-    document.addEventListener("click", e => {
-      if (!styleBrushMenu.contains(e.target) && e.target !== inputText) {
-        hideStyleBrush();
-      }
-    });
-
-    document.addEventListener("keydown", e => {
-      if (e.key === "Escape") hideStyleBrush();
-    });
     const output = document.getElementById("outputText");
     const editor = document.querySelector(".editor");
     const btn = document.getElementById("paraphrase");
