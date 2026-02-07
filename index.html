@@ -222,6 +222,10 @@
       position: relative;
     }
 
+    .input-panel {
+      position: relative;
+    }
+
     .output {
       white-space: pre-wrap;
       color: rgba(0, 0, 0, 0.78);
@@ -449,7 +453,13 @@
 
         <div class="editor">
           <div>
-            <textarea id="inputText" placeholder="Ingresa el texto que quieres parafrasear..."></textarea>
+            <div class="input-panel">
+              <textarea id="inputText" placeholder="Ingresa el texto que quieres parafrasear..."></textarea>
+              <button id="copyInput" class="copy-btn" type="button" aria-label="Copiar entrada">Copiar</button>
+            </div>
+            <div class="controls" style="justify-content:flex-start; margin-top:12px;">
+              <button id="paraphrase">Parafrasear</button>
+            </div>
             <div id="inputCharCount" class="meta">0 caracteres</div>
           </div>
 
@@ -466,7 +476,7 @@
             </div>
             <div id="outputCharCount" class="meta"></div>
             <div id="similarityText" class="meta"></div>
-            <button id="copyOutput" class="copy-btn" type="button" aria-label="Copiar salida">Copy</button>
+            <button id="copyOutput" class="copy-btn" type="button" aria-label="Copiar salida">Copiar</button>
           </div>
         </div>
 
@@ -474,7 +484,6 @@
             <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
             <button id="downloadPdf" type="button" class="secondary-btn" disabled>Descargar PDF</button>
             <button id="downloadDocx" type="button" class="secondary-btn" disabled>Descargar Word</button>
-            <button id="paraphrase">Parafrasear</button>
           </div>
         </div>
       </div>
@@ -572,13 +581,23 @@
         if (mode === "simple") {
           if (token.type === "removed") return;
           if (token.type === "added") {
-            const outIndexAttr = Number.isInteger(token.outIndex) ? ` data-out-index="${token.outIndex}"` : "";
-            wrapped = `<span class="added syn-word"${outIndexAttr} data-token="${escaped}">${escaped}</span>`;
+            const clickable = isEligibleSynonymToken(token.value);
+            if (clickable) {
+              const outIndexAttr = Number.isInteger(token.outIndex) ? ` data-out-index="${token.outIndex}"` : "";
+              wrapped = `<span class="added syn-word"${outIndexAttr} data-token="${escaped}">${escaped}</span>`;
+            } else {
+              wrapped = `<span class="added">${escaped}</span>`;
+            }
           }
         } else if (mode === "diff") {
           if (token.type === "added") {
-            const outIndexAttr = Number.isInteger(token.outIndex) ? ` data-out-index="${token.outIndex}"` : "";
-            wrapped = `<span class="diff-added syn-word"${outIndexAttr} data-token="${escaped}">${escaped}</span>`;
+            const clickable = isEligibleSynonymToken(token.value);
+            if (clickable) {
+              const outIndexAttr = Number.isInteger(token.outIndex) ? ` data-out-index="${token.outIndex}"` : "";
+              wrapped = `<span class="diff-added syn-word"${outIndexAttr} data-token="${escaped}">${escaped}</span>`;
+            } else {
+              wrapped = `<span class="diff-added">${escaped}</span>`;
+            }
           } else if (token.type === "removed") {
             wrapped = `<span class="diff-removed">${escaped}</span>`;
           }
@@ -667,6 +686,7 @@
     const output = document.getElementById("outputText");
     const editor = document.querySelector(".editor");
     const btn = document.getElementById("paraphrase");
+    const copyInputBtn = document.getElementById("copyInput");
     const copyBtn = document.getElementById("copyOutput");
     const downloadPdfBtn = document.getElementById("downloadPdf");
     const downloadDocxBtn = document.getElementById("downloadDocx");
@@ -1279,14 +1299,32 @@
 
       try {
         await navigator.clipboard.writeText(text);
-        copyBtn.textContent = "Copied";
+        copyBtn.textContent = "Copiado";
         setTimeout(() => {
-          copyBtn.textContent = "Copy";
+          copyBtn.textContent = "Copiar";
         }, 1200);
       } catch {
         copyBtn.textContent = "Error";
         setTimeout(() => {
-          copyBtn.textContent = "Copy";
+          copyBtn.textContent = "Copiar";
+        }, 1200);
+      }
+    });
+
+    copyInputBtn.addEventListener("click", async () => {
+      const text = input.value;
+      if (!text) return;
+
+      try {
+        await navigator.clipboard.writeText(text);
+        copyInputBtn.textContent = "Copiado";
+        setTimeout(() => {
+          copyInputBtn.textContent = "Copiar";
+        }, 1200);
+      } catch {
+        copyInputBtn.textContent = "Error";
+        setTimeout(() => {
+          copyInputBtn.textContent = "Copiar";
         }, 1200);
       }
     });
