@@ -131,10 +131,17 @@
       flex: 1;
     }
 
+    .editor > div,
+    .output-panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
     textarea,
     .output {
       width: 100%;
-      min-height: 225px;
+      min-height: 0;
       height: 100%;
       padding: 16px;
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
@@ -150,6 +157,11 @@
     textarea {
       resize: none;
       color: #111;
+    }
+
+    #inputText,
+    #outputText {
+      flex: 1;
     }
 
     textarea:focus {
@@ -224,6 +236,10 @@
 
     .input-panel {
       position: relative;
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      min-height: 0;
     }
 
     .output {
@@ -609,6 +625,11 @@
         }
 
         const isPunctuationToken = punctuationTokenRegex.test(token.value);
+        if (isPunctuationToken && /<\/span>$/.test(html)) {
+          html = html.replace(/<\/span>$/, `${escaped}</span>`);
+          return;
+        }
+
         if (html.length > 0 && !isPunctuationToken && !shouldJoinWithoutSpace(tokens[i - 1]?.value, token.value)) {
           html += " ";
         }
