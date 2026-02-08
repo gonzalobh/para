@@ -122,6 +122,13 @@
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
     }
 
+    .mode-help {
+      margin: 0 0 16px;
+      font-size: 12px;
+      color: #8b8b8b;
+      line-height: 1.4;
+    }
+
     .editor {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -463,13 +470,8 @@
       </div>
 
       <div id="editorPanel" class="tab-panel active">
-        <div class="modes">
-          <button data-mode="Standard" class="active">Estándar</button>
-          <button data-mode="Shorten">Acortar</button>
-          <button data-mode="Expand">Expandir</button>
-          <button data-mode="Simplify">Simplificar</button>
-          <button data-mode="Creative">Creativo</button>
-        </div>
+        <div class="modes" id="modeControls"></div>
+        <p id="modeHelp" class="mode-help" aria-live="polite"></p>
 
         <div class="editor">
           <div>
@@ -520,21 +522,17 @@
   <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
 
   <script>
-    let currentMode = "Standard";
-    const allowedModes = ["Standard", "Shorten", "Expand", "Simplify", "Creative"];
-    const MODE_LABELS = {
-      Standard: "Estándar",
-      Shorten: "Acortar",
-      Expand: "Expandir",
-      Simplify: "Simplificar",
-      Creative: "Creativo"
-    };
-    const TONE_LABELS = {
-      Formal: "Formal",
-      Casual: "Casual",
-      Professional: "Profesional",
-      Witty: "Ingenioso"
-    };
+    const MODES = [
+      { key: "humanizar", label: "Humanizar", help: "Más natural y menos repetitivo." },
+      { key: "academico", label: "Académico", help: "Formal y objetivo." },
+      { key: "resumir", label: "Resumir", help: "Más corto, conserva lo esencial." },
+      { key: "creativo", label: "Creativo", help: "Más fluido y con estilo." },
+      { key: "simplificar", label: "Simplificar", help: "Explica fácil, frases cortas." }
+    ];
+    let currentMode = "humanizar";
+    const allowedModes = MODES.map(mode => mode.key);
+    const MODE_LABELS = Object.fromEntries(MODES.map(mode => [mode.key, mode.label]));
+    const MODE_HELP = Object.fromEntries(MODES.map(mode => [mode.key, mode.help]));
     const DIFF_TOKEN_LIMIT = 4000;
     const HISTORY_KEY = "para.history.v1";
     const HISTORY_MAX_ITEMS = 10;
@@ -706,7 +704,8 @@
       return { tokens, outTokens, addedCount, totalCount, diffDisabled: false };
     }
 
-    const modeButtons = document.querySelectorAll(".modes button");
+    const modeControls = document.getElementById("modeControls");
+    const modeHelp = document.getElementById("modeHelp");
     const tabButtons = document.querySelectorAll(".tab-btn");
     const input = document.getElementById("inputText");
     const inputText = input;
@@ -723,6 +722,18 @@
     const toggleChanges = document.getElementById("toggleChanges");
     const toggleStatus = document.getElementById("toggleStatus");
     const historyList = document.getElementById("historyList");
+
+    function renderModeControls() {
+      modeControls.innerHTML = MODES.map(mode => `
+        <button type="button" data-mode="${mode.key}">${mode.label}</button>
+      `).join("");
+
+      modeControls.querySelectorAll("button").forEach((btnMode) => {
+        btnMode.addEventListener("click", () => {
+          setActiveMode(btnMode.dataset.mode);
+        });
+      });
+    }
 
     function switchToEditorTab() {
       tabButtons.forEach(button => button.classList.toggle("active", button.dataset.tab === "editorPanel"));
@@ -784,9 +795,10 @@
     }
 
     function setActiveMode(mode) {
-      const nextMode = allowedModes.includes(mode) ? mode : "Standard";
+      const nextMode = allowedModes.includes(mode) ? mode : "humanizar";
       currentMode = nextMode;
-      modeButtons.forEach(button => button.classList.toggle("active", button.dataset.mode === nextMode));
+      modeControls.querySelectorAll("button").forEach(button => button.classList.toggle("active", button.dataset.mode === nextMode));
+      modeHelp.textContent = MODE_HELP[nextMode] || MODE_HELP.humanizar;
     }
 
     function saveHistoryEntry(entry) {
@@ -820,16 +832,14 @@
 
       items.forEach((item) => {
         const safeResult = typeof item.result === "string" ? item.result : "";
-        const safeMode = item.mode || "Standard";
-        const safeTone = item.tone || "Formal";
+        const safeMode = allowedModes.includes(item.mode) ? item.mode : "humanizar";
         const safeOriginal = typeof item.original === "string" ? item.original : "";
         const modeLabel = MODE_LABELS[safeMode] || safeMode;
-        const toneLabel = TONE_LABELS[safeTone] || safeTone;
 
         const li = document.createElement("li");
         li.className = "history-item";
         li.innerHTML = `
-          <p class="history-item-title">${escapeHtml(formatTimestamp(item.timestamp))} · ${escapeHtml(modeLabel)} · ${escapeHtml(toneLabel)}</p>
+          <p class="history-item-title">${escapeHtml(formatTimestamp(item.timestamp))} · ${escapeHtml(modeLabel)}</p>
           <p class="history-item-text">${escapeHtml(safeResult.slice(0, 160))}${safeResult.length > 160 ? "…" : ""}</p>
         `;
 
@@ -1117,6 +1127,8 @@
       URL.revokeObjectURL(url);
     }
 
+    renderModeControls();
+    setActiveMode(currentMode);
     updateInputCount();
     renderHistory();
     updateExportButtons();
@@ -1129,12 +1141,6 @@
         tabButtons.forEach(button => button.classList.toggle("active", button === tabBtn));
         document.querySelectorAll(".tab-panel").forEach(panel => panel.classList.remove("active"));
         document.getElementById(tabBtn.dataset.tab).classList.add("active");
-      });
-    });
-
-    modeButtons.forEach(btnMode => {
-      btnMode.addEventListener("click", () => {
-        setActiveMode(btnMode.dataset.mode);
       });
     });
 
