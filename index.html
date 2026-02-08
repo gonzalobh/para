@@ -527,7 +527,11 @@
       { key: "academico", label: "Académico", help: "Formal y objetivo." },
       { key: "resumir", label: "Resumir", help: "Más corto, conserva lo esencial." },
       { key: "creativo", label: "Creativo", help: "Más fluido y con estilo." },
-      { key: "simplificar", label: "Simplificar", help: "Explica fácil, frases cortas." }
+      { key: "simplificar", label: "Simplificar", help: "Explica fácil, frases cortas." },
+      { key: "chilenizar", label: "Chilenizar", help: "Español de Chile (sutil, sin caricatura)." },
+      { key: "mexicanizar", label: "Mexicanizar", help: "Español de México (sutil, sin caricatura)." },
+      { key: "argentinizar", label: "Argentinizar", help: "Español de Argentina (sutil, sin caricatura)." },
+      { key: "espanolizar", label: "Españolizar", help: "Español de España (sutil, sin caricatura)." }
     ];
     let currentMode = "humanizar";
     const allowedModes = MODES.map(mode => mode.key);
@@ -538,7 +542,11 @@
       academico: "Redactando…",
       resumir: "Resumiendo…",
       creativo: "Creando…",
-      simplificar: "Simplificando…"
+      simplificar: "Simplificando…",
+      chilenizar: "Chilenizando…",
+      mexicanizar: "Mexicanizando…",
+      argentinizar: "Argentinizando…",
+      espanolizar: "Españolizando…"
     };
     const DIFF_TOKEN_LIMIT = 4000;
     const HISTORY_KEY = "para.history.v1";
