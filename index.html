@@ -11,6 +11,10 @@
       height: 100%;
     }
 
+    [hidden] {
+      display: none !important;
+    }
+
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
       background: linear-gradient(180deg, #ffffff 0%, #f9f9f9 100%);
@@ -456,6 +460,123 @@
       }
     }
 
+    .kebab-btn{
+      position:absolute;
+      top:12px;
+      right:12px;
+      width:34px;
+      height:34px;
+      border-radius:10px;
+      border:1px solid #e6e6e6;
+      background: rgba(255,255,255,0.95);
+      color:#222;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      line-height:1;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+      z-index: 30;
+    }
+    .kebab-btn:hover{ background:#fff; border-color:#d9d9d9; }
+
+    .kebab-menu{
+      position:absolute;
+      top:52px;
+      right:12px;
+      min-width: 190px;
+      background:#fff;
+      border:1px solid #eaeaea;
+      border-radius: 12px;
+      box-shadow: 0 14px 30px rgba(0,0,0,0.12);
+      padding: 6px;
+      display:grid;
+      gap:6px;
+      z-index: 40;
+    }
+    .kebab-item{
+      border:none;
+      border-radius:10px;
+      background:#f7f7f7;
+      color:#111;
+      text-align:left;
+      padding:10px 10px;
+      cursor:pointer;
+      font-size:14px;
+    }
+    .kebab-item:hover{ background:#eef4ff; }
+    .kebab-item:disabled{ opacity:0.5; cursor:not-allowed; }
+
+    .copy-btn{ z-index: 25; }
+
+    .modal-backdrop{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,0.35);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      z-index: 1000;
+    }
+    .modal-card{
+      width: min(720px, 100%);
+      background:#fff;
+      border-radius: 18px;
+      border: 1px solid #ededed;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+      padding: 16px;
+    }
+    .modal-header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .modal-title{ font-weight: 800; font-size: 16px; }
+    .modal-sub{ color:#8b8b8b; font-size: 12px; margin-top: 2px; }
+    .modal-close{
+      border:1px solid #e6e6e6;
+      background:#fff;
+      border-radius: 10px;
+      width: 34px;
+      height: 34px;
+      cursor:pointer;
+    }
+    .modal-controls{
+      display:flex;
+      justify-content:flex-start;
+      margin: 10px 0 8px 0;
+    }
+    .modal-select{
+      width: 240px;
+      max-width: 100%;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid #e6e6e6;
+      background: #fff;
+      font-size: 13px;
+    }
+    .modal-loading{ color:#666; font-size: 13px; padding: 6px 2px; }
+    .modal-text{
+      width:100%;
+      min-height: 240px;
+      resize: vertical;
+      border-radius: 14px;
+      border: 1px solid #e0e0e0;
+      padding: 12px;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      box-sizing: border-box;
+    }
+    .modal-actions{
+      margin-top: 12px;
+      display:flex;
+      justify-content:flex-end;
+    }
+
   </style>
 </head>
 <body>
@@ -486,6 +607,14 @@
           </div>
 
           <div class="output-panel">
+            <button id="outputMenuBtn" class="kebab-btn" type="button" aria-label="Más opciones" aria-haspopup="true" aria-expanded="false">⋯</button>
+
+            <div id="outputMenu" class="kebab-menu" role="menu" hidden>
+              <button id="menuTranslate" type="button" role="menuitem" class="kebab-item" disabled>Traducir…</button>
+              <button id="menuDownloadPdf" type="button" role="menuitem" class="kebab-item" disabled>Descargar PDF</button>
+              <button id="menuDownloadDocx" type="button" role="menuitem" class="kebab-item" disabled>Descargar Word</button>
+            </div>
+
             <div
               id="outputText"
               class="output"
@@ -502,17 +631,43 @@
           </div>
         </div>
 
-        <div class="controls">
-            <div style="display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end;">
-            <button id="downloadPdf" type="button" class="secondary-btn" disabled>Descargar PDF</button>
-            <button id="downloadDocx" type="button" class="secondary-btn" disabled>Descargar Word</button>
-          </div>
-        </div>
       </div>
 
       <div id="historyPanel" class="tab-panel" aria-live="polite">
         <p class="subtitle" style="margin-bottom:8px;">Últimas 10 paráfrasis guardadas localmente</p>
         <ul id="historyList" class="history-list"></ul>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="translateModal" class="modal-backdrop" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="translateTitle">
+      <div class="modal-header">
+        <div>
+          <div class="modal-title" id="translateTitle">Traducción</div>
+          <div class="modal-sub" id="translateSub">Elige un idioma</div>
+        </div>
+        <button id="translateClose" class="modal-close" type="button" aria-label="Cerrar">✕</button>
+      </div>
+
+      <div class="modal-controls">
+        <select id="translateLang" class="modal-select" aria-label="Idioma destino">
+          <option value="">Selecciona idioma…</option>
+          <option value="en">Inglés</option>
+          <option value="fr">Francés</option>
+          <option value="de">Alemán</option>
+          <option value="pt">Portugués</option>
+        </select>
+      </div>
+
+      <div class="modal-body">
+        <div id="translateLoading" class="modal-loading" style="display:none;">Traduciendo…</div>
+        <textarea id="translateText" class="modal-text" readonly></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button id="translateCopy" type="button" class="secondary-btn" disabled>Copiar</button>
       </div>
     </div>
   </div>
@@ -729,8 +884,18 @@
     const btn = document.getElementById("paraphrase");
     const copyInputBtn = document.getElementById("copyInput");
     const copyBtn = document.getElementById("copyOutput");
-    const downloadPdfBtn = document.getElementById("downloadPdf");
-    const downloadDocxBtn = document.getElementById("downloadDocx");
+    const outputMenuBtn = document.getElementById("outputMenuBtn");
+    const outputMenu = document.getElementById("outputMenu");
+    const menuTranslate = document.getElementById("menuTranslate");
+    const menuDownloadPdf = document.getElementById("menuDownloadPdf");
+    const menuDownloadDocx = document.getElementById("menuDownloadDocx");
+    const translateModal = document.getElementById("translateModal");
+    const translateClose = document.getElementById("translateClose");
+    const translateLang = document.getElementById("translateLang");
+    const translateCopy = document.getElementById("translateCopy");
+    const translateText = document.getElementById("translateText");
+    const translateLoading = document.getElementById("translateLoading");
+    const translateSub = document.getElementById("translateSub");
     const inputCharCount = document.getElementById("inputCharCount");
     const outputCharCount = document.getElementById("outputCharCount");
     const similarityText = document.getElementById("similarityText");
@@ -774,10 +939,15 @@
       isProgrammaticUpdate = false;
     }
 
+    function getVisibleOutputText() {
+      return (output.textContent || "").trim();
+    }
+
     function updateExportButtons() {
-      const hasOutput = Boolean(currentResultText.trim());
-      downloadPdfBtn.disabled = !hasOutput;
-      downloadDocxBtn.disabled = !hasOutput;
+      const hasOutput = Boolean(getVisibleOutputText());
+      menuDownloadPdf.disabled = !hasOutput;
+      menuDownloadDocx.disabled = !hasOutput;
+      menuTranslate.disabled = !hasOutput;
     }
 
     function disableDiffButton(message = "") {
@@ -1109,13 +1279,14 @@
     }
 
     function downloadPdf() {
-      if (!currentResultText.trim() || !window.jspdf?.jsPDF) return;
+      const text = getVisibleOutputText();
+      if (!text || !window.jspdf?.jsPDF) return;
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ unit: "pt", format: "a4" });
       const margin = 48;
       const pageWidth = doc.internal.pageSize.getWidth() - margin * 2;
       const pageHeight = doc.internal.pageSize.getHeight() - margin * 2;
-      const lines = doc.splitTextToSize(currentResultText, pageWidth);
+      const lines = doc.splitTextToSize(text, pageWidth);
       let y = margin;
       doc.setFontSize(12);
       lines.forEach((line) => {
@@ -1130,9 +1301,10 @@
     }
 
     async function downloadDocx() {
-      if (!currentResultText.trim() || !window.docx) return;
+      const text = getVisibleOutputText();
+      if (!text || !window.docx) return;
       const { Document, Packer, Paragraph, TextRun } = window.docx;
-      const paragraphs = currentResultText.split(/\n+/).map(line => new Paragraph({ children: [new TextRun(line)] }));
+      const paragraphs = text.split(/\n+/).map(line => new Paragraph({ children: [new TextRun(line)] }));
       const doc = new Document({ sections: [{ children: paragraphs.length ? paragraphs : [new Paragraph("")] }] });
       const blob = await Packer.toBlob(doc);
       const url = URL.createObjectURL(blob);
@@ -1171,15 +1343,131 @@
 
     output.addEventListener("click", onSynWordClick);
 
+    function openOutputMenu() {
+      outputMenu.hidden = false;
+      outputMenuBtn.setAttribute("aria-expanded", "true");
+    }
+
+    function closeOutputMenu() {
+      outputMenu.hidden = true;
+      outputMenuBtn.setAttribute("aria-expanded", "false");
+    }
+
+    function openTranslateModal() {
+      translateModal.hidden = false;
+      translateSub.textContent = "Elige un idioma";
+      translateLang.value = "";
+      translateText.value = "";
+      translateLoading.style.display = "none";
+      translateCopy.disabled = true;
+    }
+
+    function closeTranslateModal() {
+      translateModal.hidden = true;
+      translateLang.value = "";
+      translateText.value = "";
+      translateLoading.style.display = "none";
+      translateCopy.disabled = true;
+    }
+
+    outputMenuBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (outputMenu.hidden) openOutputMenu();
+      else closeOutputMenu();
+    });
+
+    outputMenu.addEventListener("click", (e) => e.stopPropagation());
+
     document.addEventListener("click", (event) => {
-      if (!synonymPopover) return;
-      if (synonymPopover.contains(event.target)) return;
-      if (event.target.closest(".syn-word") === synonymAnchor) return;
-      closeSynonymPopover();
+      if (synonymPopover) {
+        if (synonymPopover.contains(event.target)) return;
+        if (event.target.closest(".syn-word") === synonymAnchor) return;
+        closeSynonymPopover();
+      }
+      if (!outputMenu.hidden) closeOutputMenu();
     });
 
     document.addEventListener("keydown", (event) => {
-      if (event.key === "Escape") closeSynonymPopover();
+      if (event.key !== "Escape") return;
+      closeSynonymPopover();
+      if (!outputMenu.hidden) closeOutputMenu();
+      if (!translateModal.hidden) closeTranslateModal();
+    });
+
+    menuDownloadPdf.addEventListener("click", () => {
+      closeOutputMenu();
+      downloadPdf();
+    });
+
+    menuDownloadDocx.addEventListener("click", () => {
+      closeOutputMenu();
+      downloadDocx().catch(() => {});
+    });
+
+    translateClose.addEventListener("click", closeTranslateModal);
+
+    translateModal.addEventListener("click", (e) => {
+      if (e.target === translateModal) closeTranslateModal();
+    });
+
+    menuTranslate.addEventListener("click", () => {
+      closeOutputMenu();
+      openTranslateModal();
+    });
+
+    translateCopy.addEventListener("click", async () => {
+      const t = (translateText.value || "").trim();
+      if (!t) return;
+      try {
+        await navigator.clipboard.writeText(t);
+        translateCopy.textContent = "Copiado";
+        setTimeout(() => {
+          translateCopy.textContent = "Copiar";
+        }, 1200);
+      } catch {
+        translateCopy.textContent = "Error";
+        setTimeout(() => {
+          translateCopy.textContent = "Copiar";
+        }, 1200);
+      }
+    });
+
+    translateLang.addEventListener("change", async () => {
+      const lang = translateLang.value;
+      const source = getVisibleOutputText();
+      const labels = { en: "Inglés", fr: "Francés", de: "Alemán", pt: "Portugués" };
+
+      translateText.value = "";
+      translateCopy.disabled = true;
+
+      if (!lang) {
+        translateSub.textContent = "Elige un idioma";
+        return;
+      }
+      if (!source) {
+        translateSub.textContent = "No hay texto para traducir";
+        return;
+      }
+
+      translateSub.textContent = `Destino: ${labels[lang] || lang}`;
+      translateLoading.style.display = "block";
+
+      try {
+        const r = await fetch("/api/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: source, target: lang })
+        });
+        const data = await r.json().catch(() => ({ translation: "" }));
+        const out = (data.translation || "").trim();
+        translateText.value = out || "No se pudo traducir. Intenta nuevamente.";
+        translateCopy.disabled = !Boolean(out);
+      } catch {
+        translateText.value = "No se pudo traducir. Intenta nuevamente.";
+        translateCopy.disabled = true;
+      } finally {
+        translateLoading.style.display = "none";
+      }
     });
 
     output.addEventListener("input", () => {
@@ -1381,10 +1669,6 @@
       }
     });
 
-    downloadPdfBtn.addEventListener("click", downloadPdf);
-    downloadDocxBtn.addEventListener("click", () => {
-      downloadDocx().catch(() => {});
-    });
   </script>
 
 
