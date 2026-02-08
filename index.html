@@ -46,6 +46,18 @@
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
     }
 
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .header-left {
+      flex: 1;
+    }
+
     h1 {
       margin-top: 0;
       margin-bottom: 6px;
@@ -55,50 +67,40 @@
     }
 
     .subtitle {
-      margin: 0 0 20px;
+      margin: 0;
       color: #8f8f8f;
       font-size: 14px;
     }
 
-    .tabs {
-      display: inline-flex;
-      width: fit-content;
+    .history-btn {
+      display: flex;
+      align-items: center;
       gap: 6px;
-      padding: 4px;
-      border-radius: 12px;
-      background: #f5f5f5;
-      margin-bottom: 14px;
-    }
-
-    .tab-btn {
-      border: none;
-      background: transparent;
-      color: #666;
-      border-radius: 10px;
-      font-size: 13px;
-      padding: 7px 12px;
-      cursor: pointer;
-    }
-
-    .tab-btn.active {
+      padding: 8px 14px;
+      border: 1px solid #e0e0e0;
       background: #fff;
-      color: #111;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+      color: #333;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
 
-    .tab-panel {
-      display: none;
+    .history-btn:hover {
+      background: #f9f9f9;
+      border-color: #ccc;
     }
 
-    .tab-panel.active {
-      display: block;
+    .history-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2;
     }
 
     #editorPanel {
       flex: 1;
-    }
-
-    #editorPanel.active {
       display: flex;
       flex-direction: column;
     }
@@ -331,6 +333,83 @@
       background: #f4f8ff;
     }
 
+    .translate-wrap {
+      position: relative;
+      display: inline-flex;
+    }
+
+    .translate-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 140px;
+      background: #fff;
+      border: 1px solid #eaeaea;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      padding: 6px;
+      display: grid;
+      gap: 4px;
+      z-index: 100;
+    }
+
+    .translate-menu button {
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: #333;
+      text-align: left;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s ease;
+    }
+
+    .translate-menu button:hover {
+      background: #f5f5f5;
+    }
+
+    .translate-menu button.active {
+      background: #eef4ff;
+      color: #0b57d0;
+    }
+
+    .translate-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #eef4ff;
+      border: 1px solid #d4e4ff;
+      border-radius: 10px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: #0b57d0;
+    }
+
+    .translate-banner-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .translate-banner button {
+      border: none;
+      background: transparent;
+      color: #0b57d0;
+      cursor: pointer;
+      font-size: 13px;
+      text-decoration: underline;
+      padding: 0;
+    }
+
+    .translate-banner button:hover {
+      color: #084298;
+    }
+
     .status-label {
       font-size: 12px;
       color: #8b8b8b;
@@ -411,6 +490,70 @@
       max-height: 70vh;
       overflow: auto;
       padding-right: 6px;
+    }
+
+    .history-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .history-modal-content {
+      background: #fff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 900px;
+      max-height: 80vh;
+      overflow: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    }
+
+    .history-modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 1;
+    }
+
+    .history-modal-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .history-modal-body {
+      padding: 24px;
+    }
+
+    .history-close {
+      border: none;
+      background: transparent;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+    }
+
+    .history-close:hover {
+      background: #f5f5f5;
     }
 
     .controls {
@@ -707,12 +850,17 @@
 <body>
   <div class="page">
     <div class="container">
-      <h1>para</h1>
-      <p class="subtitle">transform your text</p>
-
-      <div class="tabs" role="tablist" aria-label="Secciones">
-        <button class="tab-btn active" type="button" data-tab="editorPanel">Editor</button>
-        <button class="tab-btn" type="button" data-tab="historyPanel">Historial</button>
+      <div class="header">
+        <div class="header-left">
+          <h1>para</h1>
+          <p class="subtitle">transform your text</p>
+        </div>
+        <button id="historyBtn" class="history-btn" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Historial
+        </button>
       </div>
 
       <div id="editorPanel" class="tab-panel active">
@@ -744,11 +892,20 @@
 
                 <button id="toggleChanges" type="button" class="secondary-btn" disabled>Ver cambios</button>
 
+                <div class="translate-wrap">
+                  <button id="translateBtn" class="secondary-btn" type="button" disabled>Traducir</button>
+                  <div id="translateMenu" class="translate-menu" hidden>
+                    <button type="button" data-lang="en">🇺🇸 Inglés</button>
+                    <button type="button" data-lang="fr">🇫🇷 Francés</button>
+                    <button type="button" data-lang="de">🇩🇪 Alemán</button>
+                    <button type="button" data-lang="pt">🇵🇹 Portugués</button>
+                  </div>
+                </div>
+
                 <div class="kebab-wrap">
                   <button id="outputMenuBtn" class="kebab-btn" type="button" aria-label="Más opciones" aria-haspopup="true" aria-expanded="false">⋯</button>
 
                   <div id="outputMenu" class="kebab-menu" role="menu" hidden>
-                    <button id="menuTranslate" type="button" role="menuitem" class="kebab-item" disabled>Traducir…</button>
                     <button id="menuDownloadPdf" type="button" role="menuitem" class="kebab-item" disabled>Descargar PDF</button>
                     <button id="menuDownloadDocx" type="button" role="menuitem" class="kebab-item" disabled>Descargar Word</button>
                   </div>
@@ -758,6 +915,14 @@
 
             <div class="panel-status">
               <span id="toggleStatus" class="status-label"></span>
+            </div>
+
+            <div id="translateBanner" class="translate-banner" hidden>
+              <div class="translate-banner-left">
+                <span>🌐</span>
+                <span id="translateBannerText">Traducido a Inglés</span>
+              </div>
+              <button id="translateBannerClose" type="button">Volver al original</button>
             </div>
 
             <div class="output-box">
@@ -777,44 +942,22 @@
 
       </div>
 
-      <div id="historyPanel" class="tab-panel" aria-live="polite">
-        <p class="subtitle" style="margin-bottom:8px;">Últimas 10 paráfrasis guardadas localmente</p>
+    </div>
+  </div>
+
+  <div id="historyModal" class="history-modal" hidden>
+    <div class="history-modal-content">
+      <div class="history-modal-header">
+        <h2 class="history-modal-title">Historial</h2>
+        <button id="historyClose" class="history-close" type="button" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="history-modal-body">
+        <p class="subtitle" style="margin-bottom:16px;">Últimas 10 paráfrasis guardadas localmente</p>
         <ul id="historyList" class="history-list"></ul>
       </div>
     </div>
   </div>
 
-
-  <div id="translateModal" class="modal-backdrop" hidden>
-    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="translateTitle">
-      <div class="modal-header">
-        <div>
-          <div class="modal-title" id="translateTitle">Traducción</div>
-          <div class="modal-sub" id="translateSub">Elige un idioma</div>
-        </div>
-        <button id="translateClose" class="modal-close" type="button" aria-label="Cerrar">✕</button>
-      </div>
-
-      <div class="modal-controls">
-        <select id="translateLang" class="modal-select" aria-label="Idioma destino">
-          <option value="">Selecciona idioma…</option>
-          <option value="en">Inglés</option>
-          <option value="fr">Francés</option>
-          <option value="de">Alemán</option>
-          <option value="pt">Portugués</option>
-        </select>
-      </div>
-
-      <div class="modal-body">
-        <div id="translateLoading" class="modal-loading" style="display:none;">Traduciendo…</div>
-        <textarea id="translateText" class="modal-text" readonly></textarea>
-      </div>
-
-      <div class="modal-actions">
-        <button id="translateCopy" type="button" class="secondary-btn" disabled>Copiar</button>
-      </div>
-    </div>
-  </div>
 
   <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.11.0/mammoth.browser.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js"></script>
@@ -1027,7 +1170,6 @@
 
     const modeControls = document.getElementById("modeControls");
     const modeHelp = document.getElementById("modeHelp");
-    const tabButtons = document.querySelectorAll(".tab-btn");
     const input = document.getElementById("inputText");
     const inputText = input;
     const output = document.getElementById("outputText");
@@ -1037,16 +1179,13 @@
     const copyBtn = document.getElementById("copyOutput");
     const outputMenuBtn = document.getElementById("outputMenuBtn");
     const outputMenu = document.getElementById("outputMenu");
-    const menuTranslate = document.getElementById("menuTranslate");
     const menuDownloadPdf = document.getElementById("menuDownloadPdf");
     const menuDownloadDocx = document.getElementById("menuDownloadDocx");
-    const translateModal = document.getElementById("translateModal");
-    const translateClose = document.getElementById("translateClose");
-    const translateLang = document.getElementById("translateLang");
-    const translateCopy = document.getElementById("translateCopy");
-    const translateText = document.getElementById("translateText");
-    const translateLoading = document.getElementById("translateLoading");
-    const translateSub = document.getElementById("translateSub");
+    const translateBtn = document.getElementById("translateBtn");
+    const translateMenu = document.getElementById("translateMenu");
+    const translateBanner = document.getElementById("translateBanner");
+    const translateBannerText = document.getElementById("translateBannerText");
+    const translateBannerClose = document.getElementById("translateBannerClose");
     const inputCharCount = document.getElementById("inputCharCount");
     const outputCharCount = document.getElementById("outputCharCount");
     const similarityText = document.getElementById("similarityText");
@@ -1054,6 +1193,10 @@
     const toggleStatus = document.getElementById("toggleStatus");
     const outputPanelEl = document.querySelector(".output-panel");
     const toggleInputBtn = document.getElementById("toggleInput");
+
+    // Translation state
+    let currentTranslation = null; // { lang, text, original }
+    let isTranslated = false;
 
     function syncStatusVisibility() {
       if (!outputPanelEl || !toggleStatus) return;
@@ -1132,12 +1275,6 @@
       }
     }
 
-    function switchToEditorTab() {
-      tabButtons.forEach(button => button.classList.toggle("active", button.dataset.tab === "editorPanel"));
-      document.getElementById("editorPanel").classList.add("active");
-      document.getElementById("historyPanel").classList.remove("active");
-    }
-
     function setParaphraseLabel(isLoading) {
       const actionLabel = MODE_LABELS[currentMode] || "Humanizar";
       const loadingLabel = MODE_LOADING[currentMode] || `${actionLabel}…`;
@@ -1164,11 +1301,12 @@
       const hasOutput = Boolean(getVisibleOutputText());
       menuDownloadPdf.disabled = !hasOutput;
       menuDownloadDocx.disabled = !hasOutput;
-      menuTranslate.disabled = !hasOutput;
+      translateBtn.disabled = !hasOutput;
 
       copyBtn.hidden = !hasOutput;
       outputMenuBtn.hidden = !hasOutput;
       toggleChanges.hidden = !hasOutput;
+      translateBtn.hidden = !hasOutput;
 
       if (!hasOutput) {
         outputMenu.hidden = true;
@@ -1286,7 +1424,7 @@
             ? Math.round(100 - (currentDiff.addedCount / currentDiff.totalCount) * 100)
             : 100;
           similarityText.textContent = getSimilarityLabel(similarity);
-          switchToEditorTab();
+          closeHistoryModal();
         });
 
         historyList.appendChild(li);
@@ -1466,7 +1604,6 @@
         }
         input.value = text;
         updateInputCount();
-        switchToEditorTab();
         clearOutputState();
       } catch (error) {
         setOutputHtml(escapeHtml(error.message || "No se pudo leer el archivo."));
@@ -1561,12 +1698,25 @@
 
     input.addEventListener("input", updateInputCount);
 
-    tabButtons.forEach(tabBtn => {
-      tabBtn.addEventListener("click", () => {
-        tabButtons.forEach(button => button.classList.toggle("active", button === tabBtn));
-        document.querySelectorAll(".tab-panel").forEach(panel => panel.classList.remove("active"));
-        document.getElementById(tabBtn.dataset.tab).classList.add("active");
-      });
+    // History modal functionality
+    const historyBtn = document.getElementById("historyBtn");
+    const historyModal = document.getElementById("historyModal");
+    const historyClose = document.getElementById("historyClose");
+
+    function openHistoryModal() {
+      historyModal.hidden = false;
+      renderHistory();
+    }
+
+    function closeHistoryModal() {
+      historyModal.hidden = true;
+    }
+
+    historyBtn.addEventListener("click", openHistoryModal);
+    historyClose.addEventListener("click", closeHistoryModal);
+    
+    historyModal.addEventListener("click", (e) => {
+      if (e.target === historyModal) closeHistoryModal();
     });
 
     toggleChanges.addEventListener("click", () => {
@@ -1595,21 +1745,82 @@
       outputMenuBtn.setAttribute("aria-expanded", "false");
     }
 
-    function openTranslateModal() {
-      translateModal.hidden = false;
-      translateSub.textContent = "Elige un idioma";
-      translateLang.value = "";
-      translateText.value = "";
-      translateLoading.style.display = "none";
-      translateCopy.disabled = true;
+    function openTranslateMenu() {
+      translateMenu.hidden = false;
+      // Highlight current language if translated
+      if (isTranslated && currentTranslation) {
+        translateMenu.querySelectorAll("button").forEach(btn => {
+          btn.classList.toggle("active", btn.dataset.lang === currentTranslation.lang);
+        });
+      }
     }
 
-    function closeTranslateModal() {
-      translateModal.hidden = true;
-      translateLang.value = "";
-      translateText.value = "";
-      translateLoading.style.display = "none";
-      translateCopy.disabled = true;
+    function closeTranslateMenu() {
+      translateMenu.hidden = true;
+    }
+
+    function showTranslateBanner(langCode) {
+      const labels = { en: "Inglés", fr: "Francés", de: "Alemán", pt: "Portugués" };
+      translateBannerText.textContent = `Traducido a ${labels[langCode] || langCode}`;
+      translateBanner.hidden = false;
+    }
+
+    function hideTranslateBanner() {
+      translateBanner.hidden = true;
+    }
+
+    function restoreOriginalText() {
+      if (currentTranslation && currentTranslation.original) {
+        setOutputHtml(escapeHtml(currentTranslation.original));
+        isTranslated = false;
+        hideTranslateBanner();
+        outputCharCount.textContent = `${currentTranslation.original.length} caracteres`;
+      }
+    }
+
+    async function translateToLanguage(lang) {
+      const source = isTranslated && currentTranslation 
+        ? currentTranslation.original 
+        : getVisibleOutputText();
+      
+      if (!source) return;
+
+      // Store original if first translation
+      if (!currentTranslation) {
+        currentTranslation = { original: source };
+      }
+
+      closeTranslateMenu();
+      
+      // Show loading state
+      const loadingText = "Traduciendo...";
+      const previousText = output.textContent;
+      setOutputHtml(escapeHtml(loadingText));
+
+      try {
+        const r = await fetch("/api/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: source, target: lang })
+        });
+        const data = await r.json().catch(() => ({ translation: "" }));
+        const translated = (data.translation || "").trim();
+        
+        if (translated) {
+          currentTranslation.text = translated;
+          currentTranslation.lang = lang;
+          setOutputHtml(escapeHtml(translated));
+          isTranslated = true;
+          showTranslateBanner(lang);
+          outputCharCount.textContent = `${translated.length} caracteres`;
+        } else {
+          setOutputHtml(escapeHtml(previousText));
+          alert("No se pudo traducir. Intenta nuevamente.");
+        }
+      } catch {
+        setOutputHtml(escapeHtml(previousText));
+        alert("No se pudo traducir. Intenta nuevamente.");
+      }
     }
 
     outputMenuBtn.addEventListener("click", (e) => {
@@ -1620,6 +1831,25 @@
 
     outputMenu.addEventListener("click", (e) => e.stopPropagation());
 
+    translateBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (translateMenu.hidden) openTranslateMenu();
+      else closeTranslateMenu();
+    });
+
+    translateMenu.addEventListener("click", (e) => e.stopPropagation());
+
+    translateMenu.querySelectorAll("button[data-lang]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const lang = btn.dataset.lang;
+        translateToLanguage(lang);
+      });
+    });
+
+    translateBannerClose.addEventListener("click", () => {
+      restoreOriginalText();
+    });
+
     document.addEventListener("click", (event) => {
       if (synonymPopover) {
         if (synonymPopover.contains(event.target)) return;
@@ -1627,13 +1857,15 @@
         closeSynonymPopover();
       }
       if (!outputMenu.hidden) closeOutputMenu();
+      if (!translateMenu.hidden) closeTranslateMenu();
     });
 
     document.addEventListener("keydown", (event) => {
       if (event.key !== "Escape") return;
       closeSynonymPopover();
       if (!outputMenu.hidden) closeOutputMenu();
-      if (!translateModal.hidden) closeTranslateModal();
+      if (!translateMenu.hidden) closeTranslateMenu();
+      if (!historyModal.hidden) closeHistoryModal();
     });
 
     menuDownloadPdf.addEventListener("click", () => {
@@ -1646,72 +1878,6 @@
       downloadDocx().catch(() => {});
     });
 
-    translateClose.addEventListener("click", closeTranslateModal);
-
-    translateModal.addEventListener("click", (e) => {
-      if (e.target === translateModal) closeTranslateModal();
-    });
-
-    menuTranslate.addEventListener("click", () => {
-      closeOutputMenu();
-      openTranslateModal();
-    });
-
-    translateCopy.addEventListener("click", async () => {
-      const t = (translateText.value || "").trim();
-      if (!t) return;
-      try {
-        await navigator.clipboard.writeText(t);
-        translateCopy.textContent = "Copiado";
-        setTimeout(() => {
-          translateCopy.textContent = "Copiar";
-        }, 1200);
-      } catch {
-        translateCopy.textContent = "Error";
-        setTimeout(() => {
-          translateCopy.textContent = "Copiar";
-        }, 1200);
-      }
-    });
-
-    translateLang.addEventListener("change", async () => {
-      const lang = translateLang.value;
-      const source = getVisibleOutputText();
-      const labels = { en: "Inglés", fr: "Francés", de: "Alemán", pt: "Portugués" };
-
-      translateText.value = "";
-      translateCopy.disabled = true;
-
-      if (!lang) {
-        translateSub.textContent = "Elige un idioma";
-        return;
-      }
-      if (!source) {
-        translateSub.textContent = "No hay texto para traducir";
-        return;
-      }
-
-      translateSub.textContent = `Destino: ${labels[lang] || lang}`;
-      translateLoading.style.display = "block";
-
-      try {
-        const r = await fetch("/api/translate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: source, target: lang })
-        });
-        const data = await r.json().catch(() => ({ translation: "" }));
-        const out = (data.translation || "").trim();
-        translateText.value = out || "No se pudo traducir. Intenta nuevamente.";
-        translateCopy.disabled = !Boolean(out);
-      } catch {
-        translateText.value = "No se pudo traducir. Intenta nuevamente.";
-        translateCopy.disabled = true;
-      } finally {
-        translateLoading.style.display = "none";
-      }
-    });
-
     output.addEventListener("input", () => {
       if (isProgrammaticUpdate || !currentResultText) return;
 
@@ -1720,6 +1886,12 @@
       disableDiffButton("Editado manualmente");
       outputCharCount.textContent = `${output.textContent.length} caracteres`;
       similarityText.textContent = "";
+      
+      // Reset translation state on manual edit
+      currentTranslation = null;
+      isTranslated = false;
+      hideTranslateBanner();
+      
       updateExportButtons();
     });
 
@@ -1744,6 +1916,12 @@
       currentOriginalText = text;
       currentResultText = "";
       currentDiff = null;
+      
+      // Reset translation state
+      currentTranslation = null;
+      isTranslated = false;
+      hideTranslateBanner();
+      
       updateExportButtons();
       showSkeleton();
 
