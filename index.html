@@ -480,7 +480,7 @@
               <button id="copyInput" class="copy-btn" type="button" aria-label="Copiar entrada">Copiar</button>
             </div>
             <div class="controls paraphrase-controls">
-              <button id="paraphrase">Parafrasear</button>
+              <button id="paraphrase">Humanizar</button>
             </div>
             <div id="inputCharCount" class="meta">0 caracteres</div>
           </div>
@@ -533,6 +533,13 @@
     const allowedModes = MODES.map(mode => mode.key);
     const MODE_LABELS = Object.fromEntries(MODES.map(mode => [mode.key, mode.label]));
     const MODE_HELP = Object.fromEntries(MODES.map(mode => [mode.key, mode.help]));
+    const MODE_LOADING = {
+      humanizar: "Humanizando…",
+      academico: "Redactando…",
+      resumir: "Resumiendo…",
+      creativo: "Creando…",
+      simplificar: "Simplificando…"
+    };
     const DIFF_TOKEN_LIMIT = 4000;
     const HISTORY_KEY = "para.history.v1";
     const HISTORY_MAX_ITEMS = 10;
@@ -742,7 +749,9 @@
     }
 
     function setParaphraseLabel(isLoading) {
-      btn.textContent = isLoading ? "Parafraseando…" : "Parafrasear";
+      const actionLabel = MODE_LABELS[currentMode] || "Humanizar";
+      const loadingLabel = MODE_LOADING[currentMode] || `${actionLabel}…`;
+      btn.textContent = isLoading ? loadingLabel : actionLabel;
     }
 
     function getSimilarityLabel(similarity) {
@@ -799,6 +808,7 @@
       currentMode = nextMode;
       modeControls.querySelectorAll("button").forEach(button => button.classList.toggle("active", button.dataset.mode === nextMode));
       modeHelp.textContent = MODE_HELP[nextMode] || MODE_HELP.humanizar;
+      if (!btn.disabled) setParaphraseLabel(false);
     }
 
     function saveHistoryEntry(entry) {
@@ -1129,6 +1139,7 @@
 
     renderModeControls();
     setActiveMode(currentMode);
+    setParaphraseLabel(false);
     updateInputCount();
     renderHistory();
     updateExportButtons();
