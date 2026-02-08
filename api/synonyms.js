@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { word, context = "", mode = "Standard" } = req.body || {};
+    const { word, context = "", mode = "humanizar" } = req.body || {};
     const safeWord = typeof word === "string" ? word.trim() : "";
     const safeContext = typeof context === "string" ? context.slice(0, 900) : "";
 
