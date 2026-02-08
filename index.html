@@ -617,6 +617,7 @@
       justify-content:space-between;
       gap:12px;
       margin-bottom:10px;
+      min-height: 40px;
     }
 
     .panel-title{
@@ -633,8 +634,53 @@
     }
 
     .panel-status{
-      margin: -6px 0 8px;
+      margin: 0 0 8px;
       min-height: 16px;
+    }
+
+    .countries-wrap{
+      position: relative;
+      display: inline-flex;
+    }
+
+    .countries-menu{
+      position: absolute;
+      top: 40px;
+      left: 0;
+      min-width: 180px;
+      background: #fff;
+      border: 1px solid #eaeaea;
+      border-radius: 12px;
+      box-shadow: 0 14px 30px rgba(0,0,0,0.12);
+      padding: 6px;
+      display: grid;
+      gap: 6px;
+      z-index: 50;
+    }
+
+    .countries-item{
+      text-align: left;
+      padding: 10px 10px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      background: transparent;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .countries-item:hover{
+      background: rgba(0,0,0,0.04);
+    }
+
+    .countries-item.active{
+      background: rgba(0,0,0,0.06);
+      border-color: rgba(0,0,0,0.08);
+      font-weight: 600;
+    }
+
+    .chev{
+      margin-left: 6px;
+      opacity: 0.6;
     }
 
   </style>
@@ -659,6 +705,7 @@
             <div class="panel-header">
               <div class="panel-title">Entrada</div>
             </div>
+            <div class="panel-status" aria-hidden="true"></div>
             <div class="input-panel">
               <textarea id="inputText" placeholder="Ingresa el texto que quieres parafrasear..."></textarea>
               <button id="copyInput" class="copy-btn" type="button" aria-label="Copiar entrada">Copiar</button>
@@ -782,6 +829,13 @@
       espanolizar: "Españolizando…"
     };
     const DIFF_TOKEN_LIMIT = 4000;
+    const COUNTRY_MODE_KEYS = ["chilenizar", "mexicanizar", "argentinizar", "espanolizar"];
+    const COUNTRY_MODE_LABELS = Object.freeze({
+      chilenizar: "Chilenizar",
+      mexicanizar: "Mexicanizar",
+      argentinizar: "Argentinizar",
+      espanolizar: "Españolizar"
+    });
     const HISTORY_KEY = "para.history.v1";
     const HISTORY_MAX_ITEMS = 10;
     const MAX_DROP_FILE_SIZE = 5 * 1024 * 1024;
@@ -984,15 +1038,72 @@
     let inputHidden = false;
 
     function renderModeControls() {
-      modeControls.innerHTML = MODES.map(mode => `
-        <button type="button" data-mode="${mode.key}">${mode.label}</button>
-      `).join("");
+      modeControls.innerHTML = `
+        ${MODES.filter(mode => !COUNTRY_MODE_KEYS.includes(mode.key)).map(mode => `
+          <button type="button" class="mode-btn" data-mode="${mode.key}">${mode.label}</button>
+        `).join("")}
+        <div class="countries-wrap">
+          <button id="countriesBtn" class="mode-btn" type="button" aria-haspopup="true" aria-expanded="false">
+            Países <span class="chev">▾</span>
+          </button>
 
-      modeControls.querySelectorAll("button").forEach((btnMode) => {
+          <div id="countriesMenu" class="countries-menu" role="menu" hidden>
+            ${COUNTRY_MODE_KEYS.map((key) => `<button type="button" class="countries-item" data-mode="${key}" role="menuitem">${COUNTRY_MODE_LABELS[key]}</button>`).join("")}
+          </div>
+        </div>
+      `;
+
+      modeControls.querySelectorAll(".mode-btn[data-mode]").forEach((btnMode) => {
         btnMode.addEventListener("click", () => {
           setActiveMode(btnMode.dataset.mode);
         });
       });
+
+      const countriesBtn = document.getElementById("countriesBtn");
+      const countriesMenu = document.getElementById("countriesMenu");
+
+      if (countriesBtn && countriesMenu) {
+        countriesBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const isHidden = countriesMenu.hasAttribute("hidden");
+          if (isHidden) countriesMenu.removeAttribute("hidden");
+          else countriesMenu.setAttribute("hidden", "");
+          countriesBtn.setAttribute("aria-expanded", isHidden ? "true" : "false");
+        });
+
+        countriesMenu.querySelectorAll(".countries-item").forEach((countryButton) => {
+          countryButton.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const mode = countryButton.getAttribute("data-mode");
+            setActiveMode(mode);
+            countriesMenu.setAttribute("hidden", "");
+            countriesBtn.setAttribute("aria-expanded", "false");
+          });
+        });
+
+        document.addEventListener("click", () => {
+          if (!countriesMenu.hasAttribute("hidden")) {
+            countriesMenu.setAttribute("hidden", "");
+            countriesBtn.setAttribute("aria-expanded", "false");
+          }
+        });
+      }
+    }
+
+    function syncCountriesUI(activeMode) {
+      const countriesBtn = document.getElementById("countriesBtn");
+      const countriesMenu = document.getElementById("countriesMenu");
+      if (!countriesBtn || !countriesMenu) return;
+
+      countriesMenu.querySelectorAll(".countries-item").forEach((el) => {
+        el.classList.toggle("active", el.getAttribute("data-mode") === activeMode);
+      });
+
+      if (COUNTRY_MODE_LABELS[activeMode]) {
+        countriesBtn.innerHTML = `Países: ${COUNTRY_MODE_LABELS[activeMode]} <span class="chev">▾</span>`;
+      } else {
+        countriesBtn.innerHTML = `Países <span class="chev">▾</span>`;
+      }
     }
 
     function switchToEditorTab() {
@@ -1074,7 +1185,8 @@
     function setActiveMode(mode) {
       const nextMode = allowedModes.includes(mode) ? mode : "humanizar";
       currentMode = nextMode;
-      modeControls.querySelectorAll("button").forEach(button => button.classList.toggle("active", button.dataset.mode === nextMode));
+      modeControls.querySelectorAll(".mode-btn[data-mode]").forEach(button => button.classList.toggle("active", button.dataset.mode === nextMode));
+      syncCountriesUI(nextMode);
       modeHelp.textContent = MODE_HELP[nextMode] || MODE_HELP.humanizar;
       if (!btn.disabled) setParaphraseLabel(false);
     }
