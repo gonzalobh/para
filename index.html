@@ -6,6 +6,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <style>
+    :root{
+      --editor-box-h: clamp(300px, 46vh, 520px);
+    }
+
     html,
     body {
       height: 100%;
@@ -250,7 +254,8 @@
       position: relative;
       display: flex;
       flex-direction: column;
-      flex: 1;
+      flex: 0 0 auto;
+      height: var(--editor-box-h);
       min-height: 0;
     }
 
@@ -508,7 +513,8 @@
     /* Wrapper del cuadro de salida para anclar el botón Copiar */
     .output-box{
       position: relative;
-      flex: 1;
+      flex: 0 0 auto;
+      height: var(--editor-box-h);
       min-height: 0;
       display: flex;
     }
@@ -516,6 +522,12 @@
     /* Asegura que el área editable ocupe toda la altura del wrapper */
     .output-box .output{
       height: 100%;
+      min-height: 0;
+    }
+
+    .input-panel textarea{
+      height: 100%;
+      min-height: 0;
     }
 
     /* Transición suave al ocultar columna izquierda */
@@ -616,8 +628,8 @@
       align-items:center;
       justify-content:space-between;
       gap:12px;
-      margin-bottom:10px;
-      min-height: 40px;
+      margin-bottom:6px;
+      min-height: 34px;
     }
 
     .panel-title{
@@ -630,12 +642,19 @@
     .panel-actions{
       display:flex;
       align-items:center;
+      flex-wrap: nowrap;
       gap:8px;
     }
 
     .panel-status{
-      margin: 0 0 8px;
-      min-height: 16px;
+      margin: 0;
+      min-height: 0;
+      display: none;
+    }
+
+    .output-panel.has-status .panel-status{
+      display: block;
+      margin: 0 0 6px;
     }
 
     .countries-wrap{
@@ -1033,7 +1052,14 @@
     const similarityText = document.getElementById("similarityText");
     const toggleChanges = document.getElementById("toggleChanges");
     const toggleStatus = document.getElementById("toggleStatus");
+    const outputPanelEl = document.querySelector(".output-panel");
     const toggleInputBtn = document.getElementById("toggleInput");
+
+    function syncStatusVisibility() {
+      if (!outputPanelEl || !toggleStatus) return;
+      const has = (toggleStatus.textContent || "").trim().length > 0;
+      outputPanelEl.classList.toggle("has-status", has);
+    }
     const historyList = document.getElementById("historyList");
     let inputHidden = false;
 
@@ -1148,6 +1174,7 @@
         outputMenu.hidden = true;
         outputMenuBtn.setAttribute("aria-expanded", "false");
         toggleStatus.textContent = "";
+        syncStatusVisibility();
       }
     }
 
@@ -1158,12 +1185,14 @@
       toggleChanges.setAttribute("aria-pressed", "false");
       toggleChanges.disabled = true;
       toggleStatus.textContent = message;
+      syncStatusVisibility();
     }
 
     function enableDiffButton(message = "") {
       diffButtonBlocked = false;
       toggleChanges.disabled = false;
       toggleStatus.textContent = message;
+      syncStatusVisibility();
     }
 
     function applyOutputView() {
@@ -1404,6 +1433,8 @@
       outputCharCount.textContent = "";
       similarityText.textContent = "";
       disableDiffButton("");
+      toggleStatus.textContent = "";
+      syncStatusVisibility();
       updateExportButtons();
       closeSynonymPopover();
     }
@@ -1521,6 +1552,7 @@
 
     renderModeControls();
     setActiveMode(currentMode);
+    syncStatusVisibility();
     setParaphraseLabel(false);
     updateInputCount();
     renderHistory();
