@@ -310,13 +310,6 @@
       100% { background-position: -200% 0; }
     }
 
-    .secondary-action {
-      margin-top: 8px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
     .secondary-btn {
       border: 1px solid #ddd;
       background: #fff;
@@ -426,6 +419,7 @@
 
     .paraphrase-controls {
       margin-top: 12px;
+      justify-content: center;
     }
 
     select {
@@ -461,10 +455,12 @@
       }
     }
 
+    .kebab-wrap{
+      position: relative;
+      display: inline-flex;
+    }
+
     .kebab-btn{
-      position:absolute;
-      top:12px;
-      right:12px;
       width:34px;
       height:34px;
       border-radius:10px;
@@ -477,14 +473,13 @@
       justify-content:center;
       line-height:1;
       box-shadow: 0 2px 10px rgba(0,0,0,0.06);
-      z-index: 30;
     }
     .kebab-btn:hover{ background:#fff; border-color:#d9d9d9; }
 
     .kebab-menu{
       position:absolute;
-      top:52px;
-      right:12px;
+      top:40px;
+      right:0;
       min-width: 190px;
       background:#fff;
       border:1px solid #eaeaea;
@@ -510,25 +505,6 @@
 
     .copy-btn{ z-index: 25; }
 
-    /* Toolbar arriba del output */
-    .output-toolbar{
-      position: relative;
-      display: flex;
-      justify-content: flex-end;
-      margin-bottom: 8px;
-    }
-
-    /* El kebab ya NO debe ser absoluto dentro del panel */
-    .output-toolbar .kebab-btn{
-      position: static;
-    }
-
-    /* El menú debe caer debajo del botón, alineado a la derecha */
-    .output-toolbar .kebab-menu{
-      top: 44px;
-      right: 0;
-    }
-
     /* Wrapper del cuadro de salida para anclar el botón Copiar */
     .output-box{
       position: relative;
@@ -540,13 +516,6 @@
     /* Asegura que el área editable ocupe toda la altura del wrapper */
     .output-box .output{
       height: 100%;
-    }
-
-    /* Toolbar general del editor (botón ocultar entrada) */
-    .editor-toolbar{
-      display: flex;
-      justify-content: flex-end;
-      margin: 0 0 10px;
     }
 
     /* Transición suave al ocultar columna izquierda */
@@ -642,6 +611,32 @@
       justify-content:flex-end;
     }
 
+    .panel-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:10px;
+    }
+
+    .panel-title{
+      font-size:12px;
+      color:#8b8b8b;
+      font-weight:700;
+      letter-spacing:0.01em;
+    }
+
+    .panel-actions{
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .panel-status{
+      margin: -6px 0 8px;
+      min-height: 16px;
+    }
+
   </style>
 </head>
 <body>
@@ -659,12 +654,11 @@
         <div class="modes" id="modeControls"></div>
         <p id="modeHelp" class="mode-help" aria-live="polite"></p>
 
-        <div class="editor-toolbar">
-          <button id="toggleInput" class="secondary-btn" type="button">Ocultar entrada</button>
-        </div>
-
         <div class="editor">
           <div>
+            <div class="panel-header">
+              <div class="panel-title">Entrada</div>
+            </div>
             <div class="input-panel">
               <textarea id="inputText" placeholder="Ingresa el texto que quieres parafrasear..."></textarea>
               <button id="copyInput" class="copy-btn" type="button" aria-label="Copiar entrada">Copiar</button>
@@ -676,14 +670,28 @@
           </div>
 
           <div class="output-panel">
-            <div class="output-toolbar">
-              <button id="outputMenuBtn" class="kebab-btn" type="button" aria-label="Más opciones" aria-haspopup="true" aria-expanded="false">⋯</button>
+            <div class="panel-header">
+              <div class="panel-title">Salida</div>
 
-              <div id="outputMenu" class="kebab-menu" role="menu" hidden>
-                <button id="menuTranslate" type="button" role="menuitem" class="kebab-item" disabled>Traducir…</button>
-                <button id="menuDownloadPdf" type="button" role="menuitem" class="kebab-item" disabled>Descargar PDF</button>
-                <button id="menuDownloadDocx" type="button" role="menuitem" class="kebab-item" disabled>Descargar Word</button>
+              <div class="panel-actions">
+                <button id="toggleInput" class="secondary-btn" type="button">Ocultar entrada</button>
+
+                <button id="toggleChanges" type="button" class="secondary-btn" disabled>Ver cambios</button>
+
+                <div class="kebab-wrap">
+                  <button id="outputMenuBtn" class="kebab-btn" type="button" aria-label="Más opciones" aria-haspopup="true" aria-expanded="false">⋯</button>
+
+                  <div id="outputMenu" class="kebab-menu" role="menu" hidden>
+                    <button id="menuTranslate" type="button" role="menuitem" class="kebab-item" disabled>Traducir…</button>
+                    <button id="menuDownloadPdf" type="button" role="menuitem" class="kebab-item" disabled>Descargar PDF</button>
+                    <button id="menuDownloadDocx" type="button" role="menuitem" class="kebab-item" disabled>Descargar Word</button>
+                  </div>
+                </div>
               </div>
+            </div>
+
+            <div class="panel-status">
+              <span id="toggleStatus" class="status-label"></span>
             </div>
 
             <div class="output-box">
@@ -695,10 +703,6 @@
               ></div>
 
               <button id="copyOutput" class="copy-btn" type="button" aria-label="Copiar salida">Copiar</button>
-            </div>
-            <div class="secondary-action">
-              <button id="toggleChanges" type="button" class="secondary-btn" disabled>Ver cambios</button>
-              <span id="toggleStatus" class="status-label"></span>
             </div>
             <div id="outputCharCount" class="meta"></div>
             <div id="similarityText" class="meta"></div>
@@ -1024,6 +1028,16 @@
       menuDownloadPdf.disabled = !hasOutput;
       menuDownloadDocx.disabled = !hasOutput;
       menuTranslate.disabled = !hasOutput;
+
+      copyBtn.hidden = !hasOutput;
+      outputMenuBtn.hidden = !hasOutput;
+      toggleChanges.hidden = !hasOutput;
+
+      if (!hasOutput) {
+        outputMenu.hidden = true;
+        outputMenuBtn.setAttribute("aria-expanded", "false");
+        toggleStatus.textContent = "";
+      }
     }
 
     function disableDiffButton(message = "") {
