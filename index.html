@@ -966,7 +966,23 @@
     
     /* Efecto de texto atenuado cuando hay un error seleccionado (como LanguageTool) */
     .input-with-corrections.dimmed-text {
+      /* No aplicar color aquí, lo manejamos por línea */
+    }
+    
+    /* Estilos para las líneas de texto */
+    .text-line {
+      color: #000000;
+      transition: color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    
+    /* Cuando hay texto atenuado, las líneas SIN error activo se atenúan */
+    .input-with-corrections.dimmed-text .text-line:not(.active-line) {
       color: rgba(0, 0, 0, 0.25);
+    }
+    
+    /* La línea con el error activo mantiene color negro */
+    .input-with-corrections.dimmed-text .text-line.active-line {
+      color: #000000 !important;
     }
     
     /* El error activo mantiene su color normal */
@@ -2712,37 +2728,152 @@
         return;
       }
       
+      // Guardar posición del cursor ANTES de modificar
+      const selection = window.getSelection();
+      let cursorNode = null;
+      let cursorOffset = 0;
+      let savedRange = null;
+      
+      if (selection.rangeCount > 0) {
+        savedRange = selection.getRangeAt(0).cloneRange();
+        cursorNode = savedRange.startContainer;
+        cursorOffset = savedRange.startOffset;
+      }
+      
+      // Calcular posición absoluta del cursor en el texto
+      let absoluteCursorPos = 0;
+      if (cursorNode) {
+        let node = inputTextCorrectable.firstChild;
+        let found = false;
+        
+        while (node && !found) {
+          if (node === cursorNode) {
+            absoluteCursorPos += cursorOffset;
+            found = true;
+          } else if (node.nodeType === Node.TEXT_NODE) {
+            absoluteCursorPos += node.textContent.length;
+          } else if (node.nodeType === Node.ELEMENT_NODE) {
+            if (node.contains(cursorNode)) {
+              absoluteCursorPos += getTextBeforeNode(node, cursorNode, cursorOffset);
+              found = true;
+            } else {
+              absoluteCursorPos += node.textContent.length;
+            }
+          }
+          node = node.nextSibling;
+        }
+      }
+      
+      // Dividir texto en líneas
+      const lines = text.split('\n');
+      let globalPosition = 0;
+      
       // Ordenar errores por posición
       const sortedErrors = [...errors].sort((a, b) => a.start - b.start);
       
-      let html = '';
-      let lastIndex = 0;
+      // Función para encontrar errores en un rango
+      const findErrorsInRange = (start, end) => {
+        return sortedErrors.filter(error => {
+          return (error.start >= start && error.start < end) ||
+                 (error.end > start && error.end <= end) ||
+                 (error.start < start && error.end > end);
+        });
+      };
       
-      sortedErrors.forEach(error => {
-        // Texto antes del error
-        html += escapeHtml(text.substring(lastIndex, error.start));
+      // Construir HTML línea por línea
+      let html = '';
+      
+      lines.forEach((line, lineIndex) => {
+        const lineStart = globalPosition;
+        const lineEnd = globalPosition + line.length;
         
-        // Error marcado
-        const errorClass = error.type === 'spelling' 
-          ? 'correction-error correction-error-spelling' 
-          : 'correction-error correction-error-punctuation';
+        // Encontrar errores en esta línea
+        const errorsInLine = findErrorsInRange(lineStart, lineEnd);
         
-        const activeClass = activeErrorId === error.id ? ' active' : '';
+        // Determinar si esta línea tiene el error activo
+        const hasActiveError = errorsInLine.some(error => error.id === activeErrorId);
         
-        html += `<span class="${errorClass}${activeClass}" data-error-id="${error.id}">${escapeHtml(error.errorText)}</span>`;
+        // Clase para la línea
+        const lineClass = hasActiveError ? 'text-line active-line' : 'text-line';
         
-        lastIndex = error.end;
+        // Construir contenido de la línea
+        let lineHtml = '';
+        let lastIndex = lineStart;
+        
+        errorsInLine.forEach(error => {
+          // Texto antes del error (dentro de la línea)
+          if (error.start > lastIndex) {
+            lineHtml += escapeHtml(text.substring(lastIndex, error.start));
+          }
+          
+          // Error marcado
+          const errorClass = error.type === 'spelling' 
+            ? 'correction-error correction-error-spelling' 
+            : 'correction-error correction-error-punctuation';
+          
+          const activeClass = activeErrorId === error.id ? ' active' : '';
+          
+          lineHtml += `<span class="${errorClass}${activeClass}" data-error-id="${error.id}">${escapeHtml(error.errorText)}</span>`;
+          
+          lastIndex = error.end;
+        });
+        
+        // Texto restante de la línea
+        if (lastIndex < lineEnd) {
+          lineHtml += escapeHtml(text.substring(lastIndex, lineEnd));
+        }
+        
+        // Si la línea está vacía, agregar un espacio para mantener la altura
+        if (!lineHtml) {
+          lineHtml = '<br>';
+        }
+        
+        html += `<div class="${lineClass}">${lineHtml}</div>`;
+        
+        globalPosition = lineEnd + 1; // +1 por el \n
       });
       
-      // Texto restante
-      html += escapeHtml(text.substring(lastIndex));
-      
-      // Guardar posición del cursor
-      const selection = window.getSelection();
-      const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
-      const cursorOffset = range ? range.startOffset : 0;
-      
       inputTextCorrectable.innerHTML = html;
+      
+      // Restaurar cursor
+      if (absoluteCursorPos > 0) {
+        try {
+          const range = document.createRange();
+          const sel = window.getSelection();
+          
+          let currentPos = 0;
+          let targetNode = null;
+          let targetOffset = 0;
+          
+          const walkNodes = (node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+              const nodeLength = node.textContent.length;
+              if (currentPos + nodeLength >= absoluteCursorPos) {
+                targetNode = node;
+                targetOffset = absoluteCursorPos - currentPos;
+                return true;
+              }
+              currentPos += nodeLength;
+            } else if (node.nodeType === Node.ELEMENT_NODE) {
+              for (let child of node.childNodes) {
+                if (walkNodes(child)) return true;
+              }
+            }
+            return false;
+          };
+          
+          walkNodes(inputTextCorrectable);
+          
+          if (targetNode) {
+            range.setStart(targetNode, Math.min(targetOffset, targetNode.textContent.length));
+            range.collapse(true);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        } catch (e) {
+          console.error('Error restaurando cursor:', e);
+        }
+      }
       
       // Agregar event listeners a los errores
       inputTextCorrectable.querySelectorAll('.correction-error').forEach(errorSpan => {
@@ -2752,6 +2883,33 @@
           highlightError(errorId);
         });
       });
+    }
+    
+    // Función auxiliar para calcular posición de texto antes de un nodo
+    function getTextBeforeNode(parent, targetNode, offset) {
+      let length = 0;
+      
+      const walk = (node) => {
+        if (node === targetNode) {
+          length += offset;
+          return true;
+        }
+        
+        if (node.nodeType === Node.TEXT_NODE) {
+          length += node.textContent.length;
+        } else if (node.nodeType === Node.ELEMENT_NODE) {
+          for (let child of node.childNodes) {
+            if (walk(child)) return true;
+          }
+        }
+        return false;
+      };
+      
+      for (let child of parent.childNodes) {
+        if (walk(child)) break;
+      }
+      
+      return length;
     }
     
     // Detectar y mostrar correcciones (ahora async)
