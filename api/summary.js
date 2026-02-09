@@ -27,10 +27,10 @@ export default async function handler(req, res) {
   try {
     const { text, mode, customInstruction } = req.body || {};
     const ALLOWED_MODES = new Set([
-      "humanizar", "academico", "resumir", "creativo", "simplificar",
+      "correccion", "humanizar", "academico", "resumir", "creativo", "simplificar",
       "chilenizar", "mexicanizar", "argentinizar", "espanolizar"
     ]);
-    const safeMode = ALLOWED_MODES.has(mode) ? mode : "humanizar";
+    const safeMode = ALLOWED_MODES.has(mode) ? mode : "correccion";
     const safeCustomInstruction = typeof customInstruction === "string" ? customInstruction.trim() : "";
 
     if (!text || !text.trim()) {
@@ -67,6 +67,17 @@ LOCALIZACION (ANTI-CARICATURA) - OBLIGATORIO:
 `;
 
     const MODE_PROMPTS = {
+      correccion: `
+Detecta y corrige SOLO errores ortográficos y de puntuación.
+- NO cambies palabras correctas ni reformules el texto.
+- NO agregues ni quites información.
+- SOLO corrige:
+  * Errores de ortografía (ej: "exitosa" → "exitosa" si es error)
+  * Puntuación faltante o incorrecta
+  * Uso incorrecto de mayúsculas/minúsculas
+- Mantén el estilo y tono original.
+- Si no hay errores, devuelve el texto exactamente igual.
+`,
       humanizar: `
 Reescribe para sonar natural y humano.
 - Mezcla longitudes de frases y usa conectores variados.
