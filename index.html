@@ -1667,327 +1667,6 @@
       inputCharCount.textContent = `${input.value.length} caracteres`;
     }
 
-    // ============================================
-    // CORRECTION MODE FUNCTIONALITY
-    // ============================================
-    
-    let corrections = [];
-    let correctionIdCounter = 0;
-    let activeErrorId = null;
-    const inputTextCorrectable = document.getElementById('inputTextCorrectable');
-    
-    // Detectar errores en el texto (simulación - reemplazar con API real)
-    function detectErrors(text) {
-      if (!text) return [];
-      
-      const errors = [];
-      const textLower = text.toLowerCase();
-      
-      // Diccionario de errores comunes
-      const spellingErrors = {
-        'exsitosa': 'exitosa',
-        'exito': 'éxito',
-        'abeses': 'a veces',
-        'aver': 'a ver',
-        'haci': 'así',
-        'porke': 'porque',
-        'ke': 'que',
-        'kiero': 'quiero',
-        'tambien': 'también',
-        'mas': 'más',
-        'raul': 'Raúl'
-      };
-      
-      // Buscar palabras con errores
-      const wordRegex = /\b[\wáéíóúñü]+\b/gi;
-      let match;
-      
-      while ((match = wordRegex.exec(text)) !== null) {
-        const word = match[0];
-        const wordLower = word.toLowerCase();
-        
-        if (spellingErrors[wordLower]) {
-          errors.push({
-            id: correctionIdCounter++,
-            type: 'spelling',
-            errorText: word,
-            suggestion: spellingErrors[wordLower],
-            start: match.index,
-            end: match.index + word.length,
-            message: 'Posible error ortográfico'
-          });
-        }
-      }
-      
-      // Detectar errores de puntuación (espacios antes de puntuación)
-      const punctuationRegex = /\s+([.,;:!?])/g;
-      while ((match = punctuationRegex.exec(text)) !== null) {
-        errors.push({
-          id: correctionIdCounter++,
-          type: 'punctuation',
-          errorText: match[0],
-          suggestion: match[1],
-          start: match.index,
-          end: match.index + match[0].length,
-          message: 'No debe haber espacio antes de la puntuación'
-        });
-      }
-      
-      return errors;
-    }
-    
-    // Obtener texto plano del div contenteditable
-    function getPlainText(element) {
-      return element.textContent || '';
-    }
-    
-    // Establecer texto con marcado de errores
-    function setTextWithErrors(text, errors) {
-      if (!text) {
-        inputTextCorrectable.innerHTML = '';
-        return;
-      }
-      
-      if (errors.length === 0) {
-        inputTextCorrectable.textContent = text;
-        return;
-      }
-      
-      // Ordenar errores por posición
-      const sortedErrors = [...errors].sort((a, b) => a.start - b.start);
-      
-      let html = '';
-      let lastIndex = 0;
-      
-      sortedErrors.forEach(error => {
-        // Texto antes del error
-        html += escapeHtml(text.substring(lastIndex, error.start));
-        
-        // Error marcado
-        const errorClass = error.type === 'spelling' 
-          ? 'correction-error correction-error-spelling' 
-          : 'correction-error correction-error-punctuation';
-        
-        const activeClass = activeErrorId === error.id ? ' active' : '';
-        
-        html += `<span class="${errorClass}${activeClass}" data-error-id="${error.id}">${escapeHtml(error.errorText)}</span>`;
-        
-        lastIndex = error.end;
-      });
-      
-      // Texto restante
-      html += escapeHtml(text.substring(lastIndex));
-      
-      inputTextCorrectable.innerHTML = html;
-      
-      // Agregar event listeners a los errores
-      inputTextCorrectable.querySelectorAll('.correction-error').forEach(errorSpan => {
-        errorSpan.addEventListener('click', (e) => {
-          e.preventDefault();
-          const errorId = parseInt(errorSpan.dataset.errorId);
-          highlightError(errorId);
-        });
-      });
-    }
-    
-    // Detectar y mostrar correcciones
-    function checkCorrections() {
-      const text = getPlainText(inputTextCorrectable);
-      corrections = detectErrors(text);
-      renderCorrectionsList();
-      setTextWithErrors(text, corrections.filter(c => !c.ignored && !c.accepted));
-      
-      // Actualizar contador de caracteres
-      inputCharCount.textContent = `${text.length} caracteres`;
-    }
-    
-    // Renderizar lista de correcciones
-    function renderCorrectionsList() {
-      const correctionList = document.getElementById('correctionList');
-      const correctionCount = document.getElementById('correctionCount');
-      
-      if (!correctionList || !correctionCount) return;
-      
-      const activeCorrections = corrections.filter(c => !c.ignored && !c.accepted);
-      correctionCount.textContent = activeCorrections.length;
-      
-      if (activeCorrections.length === 0) {
-        correctionList.innerHTML = `
-          <div class="no-corrections">
-            <div class="no-corrections-icon">✓</div>
-            <div><strong>No se encontraron errores</strong></div>
-          </div>
-        `;
-        return;
-      }
-      
-      correctionList.innerHTML = activeCorrections.map(error => {
-        const typeLabel = error.type === 'spelling' ? 'Ortografía inadecuada' : 'Puntuación';
-        const iconClass = error.type === 'spelling' ? 'correction-icon-spelling' : 'correction-icon-punctuation';
-        const isActive = activeErrorId === error.id;
-        
-        return `
-          <div class="correction-item ${isActive ? 'active' : ''}" data-error-id="${error.id}">
-            <div class="correction-item-header">
-              <div class="correction-icon ${iconClass}"></div>
-              <div class="correction-item-content">
-                <div class="correction-type">${typeLabel}</div>
-                <div class="correction-error-text">
-                  ${error.message}
-                </div>
-                <div class="correction-error-text">
-                  <span class="correction-error-word">${escapeHtml(error.errorText)}</span>
-                </div>
-                <div class="correction-suggestion" data-action="apply-suggestion">
-                  ${escapeHtml(error.suggestion)}
-                </div>
-                <div class="correction-actions">
-                  <button class="correction-btn" data-action="ignore">
-                    Ignorar
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        `;
-      }).join('');
-      
-      // Agregar event listeners
-      correctionList.querySelectorAll('.correction-item').forEach(item => {
-        const errorId = parseInt(item.dataset.errorId);
-        
-        item.addEventListener('click', (e) => {
-          if (!e.target.closest('[data-action]')) {
-            highlightError(errorId);
-          }
-        });
-        
-        const suggestionBtn = item.querySelector('[data-action="apply-suggestion"]');
-        if (suggestionBtn) {
-          suggestionBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            applySuggestion(errorId);
-          });
-        }
-        
-        const ignoreBtn = item.querySelector('[data-action="ignore"]');
-        if (ignoreBtn) {
-          ignoreBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            ignoreError(errorId);
-          });
-        }
-      });
-    }
-    
-    // Resaltar un error específico
-    function highlightError(errorId) {
-      activeErrorId = errorId;
-      
-      // Actualizar clases en la lista
-      document.querySelectorAll('.correction-item').forEach(item => {
-        item.classList.toggle('active', parseInt(item.dataset.errorId) === errorId);
-      });
-      
-      // Actualizar clases en el texto
-      inputTextCorrectable.querySelectorAll('.correction-error').forEach(span => {
-        span.classList.toggle('active', parseInt(span.dataset.errorId) === errorId);
-      });
-      
-      // Scroll al error en el texto
-      const errorSpan = inputTextCorrectable.querySelector(`[data-error-id="${errorId}"]`);
-      if (errorSpan) {
-        errorSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      }
-    }
-    
-    // Aplicar sugerencia
-    function applySuggestion(errorId) {
-      const error = corrections.find(e => e.id === errorId);
-      if (!error) return;
-      
-      const text = getPlainText(inputTextCorrectable);
-      const before = text.substring(0, error.start);
-      const after = text.substring(error.end);
-      const newText = before + error.suggestion + after;
-      
-      // Actualizar posiciones de otros errores
-      const diff = error.suggestion.length - error.errorText.length;
-      corrections.forEach(e => {
-        if (e.start > error.start) {
-          e.start += diff;
-          e.end += diff;
-        }
-      });
-      
-      // Marcar como aceptado
-      error.accepted = true;
-      activeErrorId = null;
-      
-      // Actualizar texto
-      inputTextCorrectable.textContent = newText;
-      
-      // Re-chequear
-      setTimeout(() => checkCorrections(), 100);
-    }
-    
-    // Ignorar error
-    function ignoreError(errorId) {
-      const error = corrections.find(e => e.id === errorId);
-      if (!error) return;
-      
-      error.ignored = true;
-      activeErrorId = null;
-      
-      const text = getPlainText(inputTextCorrectable);
-      renderCorrectionsList();
-      setTextWithErrors(text, corrections.filter(c => !c.ignored && !c.accepted));
-    }
-    
-    // Toggle entre modo normal y modo corrección
-    function toggleCorrectionMode(isCorrectionMode) {
-      if (isCorrectionMode) {
-        // Copiar texto del textarea al div editable
-        const text = input.value;
-        inputTextCorrectable.textContent = text;
-        input.style.display = 'none';
-        inputTextCorrectable.style.display = 'block';
-        
-        // Iniciar chequeo
-        checkCorrections();
-      } else {
-        // Copiar texto del div editable al textarea
-        const text = getPlainText(inputTextCorrectable);
-        input.value = text;
-        inputTextCorrectable.style.display = 'none';
-        input.style.display = 'block';
-        
-        // Limpiar correcciones
-        corrections = [];
-        activeErrorId = null;
-      }
-    }
-    
-    // Event listener para cambios en el texto editable
-    let correctionTimeout;
-    if (inputTextCorrectable) {
-      inputTextCorrectable.addEventListener('input', () => {
-        clearTimeout(correctionTimeout);
-        correctionTimeout = setTimeout(() => {
-          if (currentMode === 'correccion') {
-            checkCorrections();
-          }
-        }, 800);
-      });
-      
-      // Prevenir que se pegue HTML formateado
-      inputTextCorrectable.addEventListener('paste', (e) => {
-        e.preventDefault();
-        const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-        document.execCommand('insertText', false, text);
-      });
-    }
-
     function setActiveMode(mode) {
       const nextMode = allowedModes.includes(mode) ? mode : "correccion";
       const previousMode = currentMode;
@@ -2743,10 +2422,334 @@
       }
     });
 
-    renderModeControls();
-    setActiveMode(currentMode);
+    // ============================================
+    // CORRECTION MODE FUNCTIONALITY
+    // ============================================
+    
+    let corrections = [];
+    let correctionIdCounter = 0;
+    let activeErrorId = null;
+    const inputTextCorrectable = document.getElementById('inputTextCorrectable');
+    
+    // Detectar errores en el texto (simulación - reemplazar con API real)
+    function detectErrors(text) {
+      if (!text) return [];
+      
+      const errors = [];
+      const textLower = text.toLowerCase();
+      
+      // Diccionario de errores comunes
+      const spellingErrors = {
+        'exsitosa': 'exitosa',
+        'exitosa': 'exitosa', // Mantener para demostración
+        'exito': 'éxito',
+        'abeses': 'a veces',
+        'aver': 'a ver',
+        'haci': 'así',
+        'porke': 'porque',
+        'ke': 'que',
+        'kiero': 'quiero',
+        'tambien': 'también',
+        'mas': 'más',
+        'raul': 'Raúl'
+      };
+      
+      // Buscar palabras con errores
+      const wordRegex = /\b[\wáéíóúñü]+\b/gi;
+      let match;
+      
+      while ((match = wordRegex.exec(text)) !== null) {
+        const word = match[0];
+        const wordLower = word.toLowerCase();
+        
+        if (spellingErrors[wordLower]) {
+          errors.push({
+            id: correctionIdCounter++,
+            type: 'spelling',
+            errorText: word,
+            suggestion: spellingErrors[wordLower],
+            start: match.index,
+            end: match.index + word.length,
+            message: 'Posible error ortográfico'
+          });
+        }
+      }
+      
+      // Detectar errores de puntuación (espacios antes de puntuación)
+      const punctuationRegex = /\s+([.,;:!?])/g;
+      while ((match = punctuationRegex.exec(text)) !== null) {
+        errors.push({
+          id: correctionIdCounter++,
+          type: 'punctuation',
+          errorText: match[0],
+          suggestion: match[1],
+          start: match.index,
+          end: match.index + match[0].length,
+          message: 'No debe haber espacio antes de la puntuación'
+        });
+      }
+      
+      return errors;
+    }
+    
+    // Obtener texto plano del div contenteditable
+    function getPlainText(element) {
+      return element.textContent || '';
+    }
+    
+    // Establecer texto con marcado de errores
+    function setTextWithErrors(text, errors) {
+      if (!text) {
+        inputTextCorrectable.innerHTML = '';
+        return;
+      }
+      
+      if (errors.length === 0) {
+        inputTextCorrectable.textContent = text;
+        return;
+      }
+      
+      // Ordenar errores por posición
+      const sortedErrors = [...errors].sort((a, b) => a.start - b.start);
+      
+      let html = '';
+      let lastIndex = 0;
+      
+      sortedErrors.forEach(error => {
+        // Texto antes del error
+        html += escapeHtml(text.substring(lastIndex, error.start));
+        
+        // Error marcado
+        const errorClass = error.type === 'spelling' 
+          ? 'correction-error correction-error-spelling' 
+          : 'correction-error correction-error-punctuation';
+        
+        const activeClass = activeErrorId === error.id ? ' active' : '';
+        
+        html += `<span class="${errorClass}${activeClass}" data-error-id="${error.id}">${escapeHtml(error.errorText)}</span>`;
+        
+        lastIndex = error.end;
+      });
+      
+      // Texto restante
+      html += escapeHtml(text.substring(lastIndex));
+      
+      // Guardar posición del cursor
+      const selection = window.getSelection();
+      const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+      const cursorOffset = range ? range.startOffset : 0;
+      
+      inputTextCorrectable.innerHTML = html;
+      
+      // Agregar event listeners a los errores
+      inputTextCorrectable.querySelectorAll('.correction-error').forEach(errorSpan => {
+        errorSpan.addEventListener('click', (e) => {
+          e.preventDefault();
+          const errorId = parseInt(errorSpan.dataset.errorId);
+          highlightError(errorId);
+        });
+      });
+    }
+    
+    // Detectar y mostrar correcciones
+    function checkCorrections() {
+      const text = getPlainText(inputTextCorrectable);
+      corrections = detectErrors(text);
+      renderCorrectionsList();
+      setTextWithErrors(text, corrections.filter(c => !c.ignored && !c.accepted));
+      
+      // Actualizar contador de caracteres
+      inputCharCount.textContent = `${text.length} caracteres`;
+    }
+    
+    // Renderizar lista de correcciones
+    function renderCorrectionsList() {
+      const correctionList = document.getElementById('correctionList');
+      const correctionCount = document.getElementById('correctionCount');
+      
+      if (!correctionList || !correctionCount) return;
+      
+      const activeCorrections = corrections.filter(c => !c.ignored && !c.accepted);
+      correctionCount.textContent = activeCorrections.length;
+      
+      if (activeCorrections.length === 0) {
+        correctionList.innerHTML = `
+          <div class="no-corrections">
+            <div class="no-corrections-icon">✓</div>
+            <div><strong>No se encontraron errores</strong></div>
+          </div>
+        `;
+        return;
+      }
+      
+      correctionList.innerHTML = activeCorrections.map(error => {
+        const typeLabel = error.type === 'spelling' ? 'Ortografía inadecuada' : 'Puntuación';
+        const iconClass = error.type === 'spelling' ? 'correction-icon-spelling' : 'correction-icon-punctuation';
+        const isActive = activeErrorId === error.id;
+        
+        return `
+          <div class="correction-item ${isActive ? 'active' : ''}" data-error-id="${error.id}">
+            <div class="correction-item-header">
+              <div class="correction-icon ${iconClass}"></div>
+              <div class="correction-item-content">
+                <div class="correction-type">${typeLabel}</div>
+                <div class="correction-error-text">
+                  ${error.message}
+                </div>
+                <div class="correction-error-text">
+                  <span class="correction-error-word">${escapeHtml(error.errorText)}</span>
+                </div>
+                <div class="correction-suggestion" data-action="apply-suggestion">
+                  ${escapeHtml(error.suggestion)}
+                </div>
+                <div class="correction-actions">
+                  <button class="correction-btn" data-action="ignore">
+                    Ignorar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+      
+      // Agregar event listeners
+      correctionList.querySelectorAll('.correction-item').forEach(item => {
+        const errorId = parseInt(item.dataset.errorId);
+        
+        item.addEventListener('click', (e) => {
+          if (!e.target.closest('[data-action]')) {
+            highlightError(errorId);
+          }
+        });
+        
+        const suggestionBtn = item.querySelector('[data-action="apply-suggestion"]');
+        if (suggestionBtn) {
+          suggestionBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            applySuggestion(errorId);
+          });
+        }
+        
+        const ignoreBtn = item.querySelector('[data-action="ignore"]');
+        if (ignoreBtn) {
+          ignoreBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            ignoreError(errorId);
+          });
+        }
+      });
+    }
+    
+    // Resaltar un error específico
+    function highlightError(errorId) {
+      activeErrorId = errorId;
+      
+      // Actualizar clases en la lista
+      document.querySelectorAll('.correction-item').forEach(item => {
+        item.classList.toggle('active', parseInt(item.dataset.errorId) === errorId);
+      });
+      
+      // Actualizar clases en el texto
+      inputTextCorrectable.querySelectorAll('.correction-error').forEach(span => {
+        span.classList.toggle('active', parseInt(span.dataset.errorId) === errorId);
+      });
+      
+      // Scroll al error en el texto
+      const errorSpan = inputTextCorrectable.querySelector(`[data-error-id="${errorId}"]`);
+      if (errorSpan) {
+        errorSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+    
+    // Aplicar sugerencia
+    function applySuggestion(errorId) {
+      const error = corrections.find(e => e.id === errorId);
+      if (!error) return;
+      
+      const text = getPlainText(inputTextCorrectable);
+      const before = text.substring(0, error.start);
+      const after = text.substring(error.end);
+      const newText = before + error.suggestion + after;
+      
+      // Actualizar posiciones de otros errores
+      const diff = error.suggestion.length - error.errorText.length;
+      corrections.forEach(e => {
+        if (e.start > error.start) {
+          e.start += diff;
+          e.end += diff;
+        }
+      });
+      
+      // Marcar como aceptado
+      error.accepted = true;
+      activeErrorId = null;
+      
+      // Actualizar texto
+      inputTextCorrectable.textContent = newText;
+      
+      // Re-chequear
+      setTimeout(() => checkCorrections(), 100);
+    }
+    
+    // Ignorar error
+    function ignoreError(errorId) {
+      const error = corrections.find(e => e.id === errorId);
+      if (!error) return;
+      
+      error.ignored = true;
+      activeErrorId = null;
+      
+      const text = getPlainText(inputTextCorrectable);
+      renderCorrectionsList();
+      setTextWithErrors(text, corrections.filter(c => !c.ignored && !c.accepted));
+    }
+    
+    // Toggle entre modo normal y modo corrección
+    function toggleCorrectionMode(isCorrectionMode) {
+      if (isCorrectionMode) {
+        // Copiar texto del textarea al div editable
+        const text = input.value;
+        inputTextCorrectable.textContent = text;
+        input.style.display = 'none';
+        inputTextCorrectable.style.display = 'block';
+        
+        // Iniciar chequeo
+        checkCorrections();
+      } else {
+        // Copiar texto del div editable al textarea
+        const text = getPlainText(inputTextCorrectable);
+        input.value = text;
+        inputTextCorrectable.style.display = 'none';
+        input.style.display = 'block';
+        
+        // Limpiar correcciones
+        corrections = [];
+        activeErrorId = null;
+      }
+    }
+    
+    // Event listener para cambios en el texto editable
+    let correctionTimeout;
+    inputTextCorrectable.addEventListener('input', () => {
+      clearTimeout(correctionTimeout);
+      correctionTimeout = setTimeout(() => {
+        if (currentMode === 'correccion') {
+          checkCorrections();
+        }
+      }, 800);
+    });
+    
+    // Prevenir que se pegue HTML formateado
+    inputTextCorrectable.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, text);
+    });
     
     // Inicializar modo corrección si es el modo activo
+    renderModeControls();
+    setActiveMode(currentMode);
     if (currentMode === 'correccion') {
       const editorPanel = document.getElementById('editorPanel');
       if (editorPanel) {
