@@ -2914,17 +2914,30 @@
         inputTextCorrectable.classList.remove('dimmed-text');
         
       } else {
+        // Cerrar cualquier tarjeta previamente abierta
+        document.querySelectorAll('.correction-item').forEach(item => {
+          item.classList.remove('active');
+        });
+        
+        inputTextCorrectable.querySelectorAll('.correction-error').forEach(span => {
+          span.classList.remove('active');
+        });
+        
         // Expandir este error
         activeErrorId = errorId;
         
         // Actualizar clases en la lista
         document.querySelectorAll('.correction-item').forEach(item => {
-          item.classList.toggle('active', parseInt(item.dataset.errorId) === errorId);
+          if (parseInt(item.dataset.errorId) === errorId) {
+            item.classList.add('active');
+          }
         });
         
         // Actualizar clases en el texto
         inputTextCorrectable.querySelectorAll('.correction-error').forEach(span => {
-          span.classList.toggle('active', parseInt(span.dataset.errorId) === errorId);
+          if (parseInt(span.dataset.errorId) === errorId) {
+            span.classList.add('active');
+          }
         });
         
         // Aplicar efecto de texto atenuado (como LanguageTool)
@@ -2934,6 +2947,12 @@
         const errorSpan = inputTextCorrectable.querySelector(`[data-error-id="${errorId}"]`);
         if (errorSpan) {
           errorSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        // Scroll a la tarjeta en la lista
+        const errorCard = document.querySelector(`.correction-item[data-error-id="${errorId}"]`);
+        if (errorCard) {
+          errorCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
       }
     }
@@ -2967,13 +2986,30 @@
       
       // Marcar como aceptado
       error.accepted = true;
-      activeErrorId = null;
+      
+      // Encontrar el siguiente error activo
+      const remainingErrors = corrections.filter(c => !c.ignored && !c.accepted);
+      const currentIndex = remainingErrors.findIndex(e => e.id === errorId);
+      const nextError = remainingErrors[currentIndex]; // El siguiente ya que este se acaba de aceptar
       
       // Actualizar texto
       inputTextCorrectable.textContent = newText;
       
-      // Re-chequear
-      setTimeout(() => checkCorrections(), 100);
+      // Re-chequear y luego abrir siguiente
+      setTimeout(async () => {
+        await checkCorrections();
+        
+        // Abrir automáticamente la siguiente tarjeta
+        const updatedRemainingErrors = corrections.filter(c => !c.ignored && !c.accepted);
+        if (updatedRemainingErrors.length > 0) {
+          // Abrir la primera tarjeta de la lista actualizada
+          toggleErrorHighlight(updatedRemainingErrors[0].id);
+        } else {
+          // No hay más errores, cerrar todo
+          activeErrorId = null;
+          inputTextCorrectable.classList.remove('dimmed-text');
+        }
+      }, 150);
     }
     
     // Ignorar error
@@ -2982,11 +3018,23 @@
       if (!error) return;
       
       error.ignored = true;
-      activeErrorId = null;
       
       const text = getPlainText(inputTextCorrectable);
       renderCorrectionsList();
       setTextWithErrors(text, corrections.filter(c => !c.ignored && !c.accepted));
+      
+      // Encontrar y abrir automáticamente la siguiente tarjeta
+      const remainingErrors = corrections.filter(c => !c.ignored && !c.accepted);
+      if (remainingErrors.length > 0) {
+        // Abrir la primera tarjeta de la lista actualizada
+        setTimeout(() => {
+          toggleErrorHighlight(remainingErrors[0].id);
+        }, 100);
+      } else {
+        // No hay más errores, cerrar todo
+        activeErrorId = null;
+        inputTextCorrectable.classList.remove('dimmed-text');
+      }
     }
     
     // Toggle entre modo normal y modo corrección
