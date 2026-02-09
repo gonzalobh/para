@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Test - Corrección API</title>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 800px;
+      margin: 40px auto;
+      padding: 20px;
+    }
+    textarea {
+      width: 100%;
+      min-height: 200px;
+      padding: 12px;
+      font-size: 16px;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-family: inherit;
+    }
+    button {
+      background: #0066cc;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      margin-top: 12px;
+    }
+    button:hover {
+      background: #0052a3;
+    }
+    .error-item {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 12px;
+      margin: 12px 0;
+      border-radius: 4px;
+    }
+    .error-type {
+      font-weight: bold;
+      color: #856404;
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    .error-text {
+      color: #dc3545;
+      font-weight: bold;
+    }
+    .suggestion {
+      color: #28a745;
+      font-weight: bold;
+    }
+    .loading {
+      color: #666;
+      font-style: italic;
+    }
+    #results {
+      margin-top: 24px;
+    }
+    .success {
+      background: #d4edda;
+      border-left-color: #28a745;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Test - API de Corrección</h1>
+  <p>Escribe texto con errores para probar la API de LanguageTool</p>
+  
+  <textarea id="inputText" placeholder="Escribe aquí tu texto con errores...">Hola, mi nombre es raul y me gusta mucho abeses escrivir textos con herrores ortograficos , gramaticales y de puntacion para provar el sistema . Espero que funcione bien porke lo nesesito para mi trabajo</textarea>
+  
+  <button onclick="checkText()">Analizar Texto</button>
+  
+  <div id="results"></div>
+
+  <script>
+    async function checkText() {
+      const text = document.getElementById('inputText').value;
+      const resultsDiv = document.getElementById('results');
+      
+      if (!text.trim()) {
+        resultsDiv.innerHTML = '<p class="error-item">Por favor escribe algún texto</p>';
+        return;
+      }
+
+      resultsDiv.innerHTML = '<p class="loading">⏳ Analizando texto...</p>';
+
+      try {
+        const response = await fetch('/api/correct', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: text,
+            language: 'es'
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error HTTP: ${response.status}`);
+        }
+
+        const data = await response.json();
+        
+        if (data.errors && data.errors.length > 0) {
+          let html = `<h2>✅ Se encontraron ${data.errors.length} error(es)</h2>`;
+          
+          data.errors.forEach((error, index) => {
+            const suggestions = error.allSuggestions || [error.suggestion];
+            html += `
+              <div class="error-item">
+                <div class="error-type">${error.type || 'Error'}</div>
+                <div><strong>Posición:</strong> ${error.start} - ${error.end}</div>
+                <div><strong>Error:</strong> <span class="error-text">"${error.errorText}"</span></div>
+                <div><strong>Mensaje:</strong> ${error.message}</div>
+                <div><strong>Sugerencia principal:</strong> <span class="suggestion">"${error.suggestion}"</span></div>
+                ${suggestions.length > 1 ? `
+                  <div><strong>Otras sugerencias:</strong> ${suggestions.slice(1).map(s => `<span class="suggestion">"${s}"</span>`).join(', ')}</div>
+                ` : ''}
+              </div>
+            `;
+          });
+          
+          resultsDiv.innerHTML = html;
+        } else {
+          resultsDiv.innerHTML = '<div class="error-item success"><strong>✓ No se encontraron errores</strong></div>';
+        }
+
+        console.log('Respuesta completa de la API:', data);
+
+      } catch (error) {
+        console.error('Error:', error);
+        resultsDiv.innerHTML = `
+          <div class="error-item" style="border-left-color: #dc3545; background: #f8d7da;">
+            <strong>❌ Error al analizar:</strong> ${error.message}
+            <br><br>
+            <small>Verifica que el endpoint /api/correct.js existe y que Vercel está corriendo.</small>
+          </div>
+        `;
+      }
+    }
+    
+    // Permitir Enter para analizar
+    document.getElementById('inputText').addEventListener('keydown', (e) => {
+      if (e.ctrlKey && e.key === 'Enter') {
+        checkText();
+      }
+    });
+  </script>
+
+  <hr style="margin: 40px 0;">
+  
+  <h3>📝 Textos de Prueba</h3>
+  <button onclick="loadSample(1)">Prueba 1 - Ortografía</button>
+  <button onclick="loadSample(2)">Prueba 2 - Puntuación</button>
+  <button onclick="loadSample(3)">Prueba 3 - Gramática</button>
+
+  <script>
+    function loadSample(num) {
+      const samples = {
+        1: "Hola, mi nombre es raul y me gusta mucho abeses escrivir textos con herrores ortograficos para provar el sistema. Espero que funcione bien porke lo nesesito para mi trabajo.",
+        2: "Este texto tiene espacios antes de la coma , el punto . y otros signos de puntuacion ! Tambien tiene problemas con las mayusculas y acentos .",
+        3: "Me gusta mucho la programacion y desarrollo aplicaciones web. Hoy voy ha hacer un nuevo proyecto que va a estar muy bien echo."
+      };
+      document.getElementById('inputText').value = samples[num];
+    }
+  </script>
+</body>
+</html>

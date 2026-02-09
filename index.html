@@ -2431,17 +2431,58 @@
     let activeErrorId = null;
     const inputTextCorrectable = document.getElementById('inputTextCorrectable');
     
-    // Detectar errores en el texto (simulación - reemplazar con API real)
+    // Detectar errores usando la API de LanguageTool
+    async function detectErrorsAPI(text) {
+      if (!text || text.trim().length === 0) return [];
+      
+      try {
+        const response = await fetch('/api/correct', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            text: text,
+            language: 'es'
+          })
+        });
+
+        if (!response.ok) {
+          console.error('Error en la API de corrección:', response.status);
+          return [];
+        }
+
+        const data = await response.json();
+        
+        // Mapear los errores de la API al formato interno
+        return (data.errors || []).map(error => ({
+          id: correctionIdCounter++,
+          type: error.type || 'grammar',
+          errorText: error.errorText,
+          suggestion: error.suggestion,
+          start: error.start,
+          end: error.end,
+          message: error.message || 'Error detectado',
+          allSuggestions: error.allSuggestions || [error.suggestion],
+          ignored: false,
+          accepted: false
+        }));
+      } catch (error) {
+        console.error('Error al detectar errores:', error);
+        return [];
+      }
+    }
+    
+    // Función legacy para compatibilidad (ahora solo para fallback)
     function detectErrors(text) {
       if (!text) return [];
       
       const errors = [];
       const textLower = text.toLowerCase();
       
-      // Diccionario de errores comunes
+      // Diccionario de errores comunes (fallback)
       const spellingErrors = {
         'exsitosa': 'exitosa',
-        'exitosa': 'exitosa', // Mantener para demostración
         'exito': 'éxito',
         'abeses': 'a veces',
         'aver': 'a ver',
@@ -2551,15 +2592,44 @@
       });
     }
     
-    // Detectar y mostrar correcciones
-    function checkCorrections() {
+    // Detectar y mostrar correcciones (ahora async)
+    async function checkCorrections() {
       const text = getPlainText(inputTextCorrectable);
-      corrections = detectErrors(text);
+      
+      // Mostrar indicador de carga
+      const correctionList = document.getElementById('correctionList');
+      if (correctionList) {
+        correctionList.innerHTML = `
+          <div class="no-corrections">
+            <div class="no-corrections-icon">⏳</div>
+            <div><strong>Analizando texto...</strong></div>
+          </div>
+        `;
+      }
+      
+      // Llamar a la API para detectar errores
+      const detectedErrors = await detectErrorsAPI(text);
+      
+      // Mantener los estados de ignored/accepted de errores previos
+      detectedErrors.forEach(newError => {
+        const existingError = corrections.find(
+          e => e.start === newError.start && e.end === newError.end && e.errorText === newError.errorText
+        );
+        if (existingError) {
+          newError.ignored = existingError.ignored;
+          newError.accepted = existingError.accepted;
+        }
+      });
+      
+      corrections = detectedErrors;
       renderCorrectionsList();
       setTextWithErrors(text, corrections.filter(c => !c.ignored && !c.accepted));
       
       // Actualizar contador de caracteres
-      inputCharCount.textContent = `${text.length} caracteres`;
+      const inputCharCount = document.getElementById('inputCharCount');
+      if (inputCharCount) {
+        inputCharCount.textContent = `${text.length} caracteres`;
+      }
     }
     
     // Renderizar lista de correcciones
@@ -2583,9 +2653,29 @@
       }
       
       correctionList.innerHTML = activeCorrections.map(error => {
-        const typeLabel = error.type === 'spelling' ? 'Ortografía inadecuada' : 'Puntuación';
-        const iconClass = error.type === 'spelling' ? 'correction-icon-spelling' : 'correction-icon-punctuation';
+        // Determinar el label del tipo de error
+        let typeLabel = 'Gramática';
+        if (error.type === 'spelling') {
+          typeLabel = 'Ortografía';
+        } else if (error.type === 'punctuation') {
+          typeLabel = 'Puntuación';
+        }
+        
+        const iconClass = error.type === 'spelling' 
+          ? 'correction-icon-spelling' 
+          : 'correction-icon-punctuation';
         const isActive = activeErrorId === error.id;
+        
+        // Generar HTML para todas las sugerencias
+        const allSuggestions = error.allSuggestions || [error.suggestion];
+        const suggestionsHTML = allSuggestions
+          .filter(s => s && s.trim().length > 0)
+          .slice(0, 3) // Máximo 3 sugerencias
+          .map((suggestion, idx) => `
+            <div class="correction-suggestion" data-action="apply-suggestion" data-suggestion="${escapeHtml(suggestion)}">
+              ${escapeHtml(suggestion)}
+            </div>
+          `).join('');
         
         return `
           <div class="correction-item ${isActive ? 'active' : ''}" data-error-id="${error.id}">
@@ -2594,14 +2684,12 @@
               <div class="correction-item-content">
                 <div class="correction-type">${typeLabel}</div>
                 <div class="correction-error-text">
-                  ${error.message}
+                  ${escapeHtml(error.message)}
                 </div>
                 <div class="correction-error-text">
                   <span class="correction-error-word">${escapeHtml(error.errorText)}</span>
                 </div>
-                <div class="correction-suggestion" data-action="apply-suggestion">
-                  ${escapeHtml(error.suggestion)}
-                </div>
+                ${suggestionsHTML}
                 <div class="correction-actions">
                   <button class="correction-btn" data-action="ignore">
                     Ignorar
@@ -2623,13 +2711,14 @@
           }
         });
         
-        const suggestionBtn = item.querySelector('[data-action="apply-suggestion"]');
-        if (suggestionBtn) {
+        // Event listener para cada sugerencia
+        item.querySelectorAll('[data-action="apply-suggestion"]').forEach(suggestionBtn => {
           suggestionBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            applySuggestion(errorId);
+            const suggestion = suggestionBtn.dataset.suggestion;
+            applySuggestion(errorId, suggestion);
           });
-        }
+        });
         
         const ignoreBtn = item.querySelector('[data-action="ignore"]');
         if (ignoreBtn) {
@@ -2663,17 +2752,20 @@
     }
     
     // Aplicar sugerencia
-    function applySuggestion(errorId) {
+    function applySuggestion(errorId, customSuggestion = null) {
       const error = corrections.find(e => e.id === errorId);
       if (!error) return;
       
       const text = getPlainText(inputTextCorrectable);
       const before = text.substring(0, error.start);
       const after = text.substring(error.end);
-      const newText = before + error.suggestion + after;
+      
+      // Usar la sugerencia personalizada o la sugerencia por defecto
+      const suggestionToApply = customSuggestion || error.suggestion;
+      const newText = before + suggestionToApply + after;
       
       // Actualizar posiciones de otros errores
-      const diff = error.suggestion.length - error.errorText.length;
+      const diff = suggestionToApply.length - error.errorText.length;
       corrections.forEach(e => {
         if (e.start > error.start) {
           e.start += diff;
