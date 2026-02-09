@@ -1080,35 +1080,6 @@
       min-width: 24px;
       text-align: center;
     }
-    
-    /* Ocultar el contador cuando no hay errores */
-    .correction-count:empty,
-    .correction-count[data-count="0"] {
-      display: none;
-    }
-    
-    .correct-all-btn {
-      padding: 6px 12px;
-      border: 1px solid #0b57d0;
-      background: #fff;
-      color: #0b57d0;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      white-space: nowrap;
-    }
-    
-    .correct-all-btn:hover {
-      background: #0b57d0;
-      color: #fff;
-    }
-    
-    .correct-all-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
 
     .correction-list {
       flex: 1;
@@ -1453,9 +1424,6 @@
                 Corregir
                 <span class="correction-count" id="correctionCount">0</span>
               </div>
-              <button id="correctAllBtn" class="correct-all-btn" type="button" style="display: none;">
-                Corregir todo
-              </button>
             </div>
             <div class="correction-list" id="correctionList">
               <div class="no-corrections">
@@ -2948,8 +2916,16 @@
     async function checkCorrections() {
       const text = getPlainText(inputTextCorrectable);
       
-      // NO mostrar "Analizando texto..." - es molesto
-      // Llamar directamente a la API
+      // Mostrar indicador de carga
+      const correctionList = document.getElementById('correctionList');
+      if (correctionList) {
+        correctionList.innerHTML = `
+          <div class="no-corrections">
+            <div class="no-corrections-icon">⏳</div>
+            <div><strong>Analizando texto...</strong></div>
+          </div>
+        `;
+      }
       
       // Llamar a la API para detectar errores
       const detectedErrors = await detectErrorsAPI(text);
@@ -2980,30 +2956,11 @@
     function renderCorrectionsList() {
       const correctionList = document.getElementById('correctionList');
       const correctionCount = document.getElementById('correctionCount');
-      const correctAllBtn = document.getElementById('correctAllBtn');
       
       if (!correctionList || !correctionCount) return;
       
       const activeCorrections = corrections.filter(c => !c.ignored && !c.accepted);
       correctionCount.textContent = activeCorrections.length;
-      correctionCount.setAttribute('data-count', activeCorrections.length);
-      
-      // Mostrar/ocultar botón "Corregir todo"
-      if (correctAllBtn) {
-        correctAllBtn.style.display = activeCorrections.length > 0 ? 'block' : 'none';
-      }
-      
-      // Si no hay texto, mostrar vacío (no mostrar "No se encontraron errores")
-      const currentText = getPlainText(inputTextCorrectable);
-      if (!currentText || currentText.trim().length === 0) {
-        correctionList.innerHTML = '';
-        correctionCount.textContent = '0';
-        correctionCount.setAttribute('data-count', '0');
-        if (correctAllBtn) {
-          correctAllBtn.style.display = 'none';
-        }
-        return;
-      }
       
       if (activeCorrections.length === 0) {
         correctionList.innerHTML = `
@@ -3063,14 +3020,13 @@
                 ${suggestionsHTML}
                 <div class="correction-actions">
                   <button class="correction-btn" data-action="ignore">
-                    Ignorar
+                    Ignorar en este texto
                   </button>
                 </div>
               </div>
             </div>
           </div>
         `;
-      }).join('');
       }).join('');
       
       // Agregar event listeners
@@ -3285,48 +3241,6 @@
       const text = (e.clipboardData || window.clipboardData).getData('text/plain');
       document.execCommand('insertText', false, text);
     });
-    
-    // Función para corregir todo
-    function correctAll() {
-      const activeCorrections = corrections.filter(c => !c.ignored && !c.accepted);
-      
-      if (activeCorrections.length === 0) return;
-      
-      let text = getPlainText(inputTextCorrectable);
-      
-      // Ordenar errores de atrás hacia adelante para no desajustar las posiciones
-      const sortedErrors = [...activeCorrections].sort((a, b) => b.start - a.start);
-      
-      // Aplicar todas las correcciones
-      sortedErrors.forEach(error => {
-        const before = text.substring(0, error.start);
-        const after = text.substring(error.end);
-        text = before + error.suggestion + after;
-      });
-      
-      // Actualizar texto
-      inputTextCorrectable.textContent = text;
-      
-      // Marcar todos como aceptados
-      activeCorrections.forEach(error => {
-        error.accepted = true;
-      });
-      
-      // Cerrar modo atenuado
-      activeErrorId = null;
-      inputTextCorrectable.classList.remove('dimmed-text');
-      
-      // Re-chequear
-      setTimeout(() => checkCorrections(), 100);
-    }
-    
-    // Event listener para el botón "Corregir todo"
-    const correctAllBtn = document.getElementById('correctAllBtn');
-    if (correctAllBtn) {
-      correctAllBtn.addEventListener('click', () => {
-        correctAll();
-      });
-    }
     
     // Inicializar modo corrección si es el modo activo
     renderModeControls();
