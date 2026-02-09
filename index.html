@@ -897,7 +897,7 @@
       position: relative;
       border-radius: 2px;
       padding: 0 2px;
-      transition: background 0.2s ease;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .correction-error:hover {
@@ -908,7 +908,7 @@
     .correction-error.active {
       background: rgba(11, 87, 208, 0.3) !important;
       border-bottom-width: 3px;
-      font-weight: 600;
+      color: #000000 !important;
     }
 
     .correction-error-spelling {
@@ -919,6 +919,7 @@
     .correction-error-spelling.active {
       background: rgba(234, 67, 53, 0.3) !important;
       border-bottom-color: #ea4335;
+      color: #000000 !important;
     }
 
     .correction-error-spelling:hover {
@@ -933,6 +934,7 @@
     .correction-error-punctuation.active {
       background: rgba(251, 188, 4, 0.3) !important;
       border-bottom-color: #fbbc04;
+      color: #000000 !important;
     }
 
     .correction-error-punctuation:hover {
@@ -958,23 +960,26 @@
       outline: none;
       /* Scroll suave */
       scroll-behavior: smooth;
-      transition: color 0.2s ease;
+      /* Transición suave para el cambio de color */
+      transition: color 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
     /* Efecto de texto atenuado cuando hay un error seleccionado (como LanguageTool) */
     .input-with-corrections.dimmed-text {
-      color: rgba(0, 0, 0, 0.3);
+      color: rgba(0, 0, 0, 0.25);
     }
     
     /* El error activo mantiene su color normal */
     .input-with-corrections.dimmed-text .correction-error.active {
-      color: inherit;
+      color: #000000 !important;
       opacity: 1;
+      font-weight: normal;
     }
     
     /* Los demás errores también se atenúan */
     .input-with-corrections.dimmed-text .correction-error:not(.active) {
-      opacity: 0.4;
+      opacity: 0.25;
+      transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
     
     /* Scrollbar personalizado para el input editable */
@@ -1020,6 +1025,8 @@
       overflow: hidden;
       /* Altura máxima igual al editor de texto */
       max-height: var(--editor-box-h);
+      /* Alinear con el inputTextCorrectable (panel-header + panel-status + margen) */
+      margin-top: 46px;
     }
 
     .correction-mode .correction-panel {
@@ -1095,7 +1102,7 @@
       border-radius: 8px;
       padding: 10px 12px;
       border: 1px solid #e0e0e0;
-      transition: all 0.2s ease;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
       cursor: pointer;
       /* Compacto por defecto */
     }
@@ -1110,6 +1117,7 @@
       background: #f8fbff;
       box-shadow: 0 2px 8px rgba(11, 87, 208, 0.15);
       padding: 14px;
+      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     .correction-item-header {
@@ -2850,9 +2858,6 @@
                 <div class="correction-type">${typeLabel}</div>
                 <div class="correction-error-text">
                   ${escapeHtml(error.message)}
-                </div>
-                <div class="correction-error-text">
-                  <span class="correction-error-word">${escapeHtml(error.errorText)}</span>
                 </div>
                 ${suggestionsHTML}
                 <div class="correction-actions">
