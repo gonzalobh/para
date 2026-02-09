@@ -148,6 +148,14 @@
       flex: 1;
     }
 
+    .correction-mode .editor {
+      grid-template-columns: 1fr 360px;
+    }
+
+    .correction-mode .output-panel {
+      display: none;
+    }
+
     .editor > div,
     .output-panel {
       display: flex;
@@ -847,31 +855,96 @@
 
     /* Estilos para el modo Corrección */
     .correction-mode .editor {
-      grid-template-columns: 1fr 320px;
+      grid-template-columns: 1fr 360px;
+    }
+
+    .correction-mode .output-panel {
+      display: none;
+    }
+
+    .correction-mode .input-panel {
+      height: auto;
+      flex: 1;
+    }
+
+    .correction-mode #inputText {
+      height: 100%;
+      min-height: 400px;
     }
 
     .correction-error {
-      border-bottom: 2px solid #ea4335;
+      background: rgba(11, 87, 208, 0.15);
+      border-bottom: 2px solid #0b57d0;
       cursor: pointer;
       position: relative;
       border-radius: 2px;
+      padding: 0 2px;
+      transition: background 0.2s ease;
+    }
+
+    .correction-error:hover {
+      background: rgba(11, 87, 208, 0.25);
     }
 
     .correction-error-spelling {
+      background: rgba(234, 67, 53, 0.15);
       border-bottom-color: #ea4335;
     }
 
+    .correction-error-spelling:hover {
+      background: rgba(234, 67, 53, 0.25);
+    }
+
     .correction-error-punctuation {
+      background: rgba(251, 188, 4, 0.15);
       border-bottom-color: #fbbc04;
+    }
+
+    .correction-error-punctuation:hover {
+      background: rgba(251, 188, 4, 0.25);
+    }
+
+    .input-with-corrections {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      padding: 16px;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      border-radius: 14px;
+      border: 1px solid #e0e0e0;
+      background: #ffffff;
+      box-sizing: border-box;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      outline: none;
+    }
+
+    .input-with-corrections:focus {
+      border-color: #0b57d0;
+      box-shadow: 0 0 0 4px rgba(11, 87, 208, 0.05);
+    }
+
+    .input-with-corrections:empty::before {
+      content: attr(data-placeholder);
+      color: #888;
+      pointer-events: none;
+    }
+
+    .correction-mode .paraphrase-controls {
+      display: none;
     }
 
     .correction-panel {
       display: none;
       flex-direction: column;
-      background: #f5f5f5;
+      background: #f8f9fa;
       border-radius: 14px;
       border: 1px solid #e0e0e0;
       overflow: hidden;
+      height: 100%;
     }
 
     .correction-mode .correction-panel {
@@ -879,47 +952,53 @@
     }
 
     .correction-panel-header {
-      padding: 12px 16px;
+      padding: 16px;
       background: #fff;
       border-bottom: 1px solid #e0e0e0;
       display: flex;
       align-items: center;
       justify-content: space-between;
+      flex-shrink: 0;
     }
 
     .correction-panel-title {
       font-size: 14px;
-      font-weight: 600;
+      font-weight: 700;
       color: #111;
       display: flex;
       align-items: center;
       gap: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
     }
 
     .correction-count {
       background: #ea4335;
       color: white;
-      border-radius: 10px;
-      padding: 2px 8px;
-      font-size: 12px;
-      font-weight: 600;
+      border-radius: 12px;
+      padding: 3px 10px;
+      font-size: 13px;
+      font-weight: 700;
+      min-width: 24px;
+      text-align: center;
     }
 
     .correction-list {
       flex: 1;
       overflow-y: auto;
-      padding: 8px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 10px;
     }
 
     .correction-item {
       background: #fff;
-      border-radius: 10px;
-      padding: 12px;
+      border-radius: 12px;
+      padding: 14px;
       border: 1px solid #e0e0e0;
       transition: all 0.2s ease;
+      cursor: pointer;
     }
 
     .correction-item:hover {
@@ -927,37 +1006,33 @@
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
+    .correction-item.active {
+      border-color: #0b57d0;
+      background: #f8fbff;
+      box-shadow: 0 2px 8px rgba(11, 87, 208, 0.15);
+    }
+
     .correction-item-header {
       display: flex;
       align-items: flex-start;
-      gap: 8px;
-      margin-bottom: 8px;
+      gap: 10px;
+      margin-bottom: 10px;
     }
 
     .correction-icon {
-      width: 20px;
-      height: 20px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
       flex-shrink: 0;
-      margin-top: 2px;
+      margin-top: 6px;
     }
 
     .correction-icon-spelling {
-      background: #fce8e6;
-      color: #ea4335;
+      background: #ea4335;
     }
 
     .correction-icon-punctuation {
-      background: #fef7e0;
-      color: #fbbc04;
-    }
-
-    .correction-icon::before {
-      content: '●';
-      font-size: 10px;
+      background: #fbbc04;
     }
 
     .correction-item-content {
@@ -968,54 +1043,76 @@
     .correction-type {
       font-size: 11px;
       font-weight: 600;
-      color: #666;
+      color: #5f6368;
       text-transform: uppercase;
       letter-spacing: 0.5px;
-      margin-bottom: 4px;
+      margin-bottom: 6px;
     }
 
     .correction-error-text {
-      font-size: 14px;
-      color: #ea4335;
-      font-weight: 500;
-      margin-bottom: 4px;
+      font-size: 15px;
+      color: #202124;
+      font-weight: 400;
+      margin-bottom: 8px;
       word-break: break-word;
+      line-height: 1.4;
+    }
+
+    .correction-error-word {
+      color: #ea4335;
+      font-weight: 600;
+      background: rgba(234, 67, 53, 0.1);
+      padding: 2px 4px;
+      border-radius: 4px;
     }
 
     .correction-suggestion-text {
       font-size: 13px;
       color: #5f6368;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
+      line-height: 1.4;
     }
 
     .correction-suggestion {
       background: #e8f0fe;
       color: #0b57d0;
-      padding: 6px 10px;
+      padding: 8px 12px;
       border-radius: 8px;
-      font-size: 13px;
+      font-size: 14px;
       font-weight: 500;
       display: inline-block;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
       word-break: break-word;
+      cursor: pointer;
+      transition: background 0.2s ease;
+    }
+
+    .correction-suggestion:hover {
+      background: #d2e3fc;
     }
 
     .correction-actions {
       display: flex;
-      gap: 6px;
-      margin-top: 8px;
+      gap: 8px;
+      margin-top: 10px;
     }
 
     .correction-btn {
       flex: 1;
-      padding: 6px 12px;
+      padding: 8px 14px;
       border-radius: 8px;
-      border: 1px solid #e0e0e0;
+      border: 1px solid #dadce0;
       background: #fff;
       font-size: 13px;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .correction-btn:hover {
+      background: #f8f9fa;
+      border-color: #5f6368;
     }
 
     .correction-btn-accept {
@@ -1029,24 +1126,22 @@
       border-color: #0842a0;
     }
 
-    .correction-btn:hover {
-      background: #f5f5f5;
-    }
-
     .correction-item-ignored {
-      opacity: 0.5;
+      opacity: 0.4;
+      pointer-events: none;
     }
 
     .no-corrections {
       text-align: center;
-      padding: 24px 16px;
-      color: #8b8b8b;
+      padding: 48px 16px;
+      color: #5f6368;
       font-size: 14px;
     }
 
     .no-corrections-icon {
-      font-size: 32px;
-      margin-bottom: 8px;
+      font-size: 48px;
+      margin-bottom: 12px;
+      opacity: 0.5;
     }
 
   </style>
@@ -1079,6 +1174,7 @@
             <div class="panel-status" aria-hidden="true"></div>
             <div class="input-panel">
               <textarea id="inputText" placeholder="Ingresa el texto que quieres parafrasear..."></textarea>
+              <div id="inputTextCorrectable" class="input-with-corrections" contenteditable="true" style="display: none;" data-placeholder="Escribe o pega tu texto aquí para revisar ortografía y gramática..."></div>
               <button id="copyInput" class="copy-btn" type="button" aria-label="Copiar entrada">Copiar</button>
             </div>
             <div class="controls paraphrase-controls">
@@ -1573,6 +1669,7 @@
 
     function setActiveMode(mode) {
       const nextMode = allowedModes.includes(mode) ? mode : "correccion";
+      const previousMode = currentMode;
       currentMode = nextMode;
       modeControls.querySelectorAll(".mode-btn[data-mode]").forEach(button => button.classList.toggle("active", button.dataset.mode === nextMode));
       syncCountriesUI(nextMode);
@@ -1582,7 +1679,15 @@
       // Toggle correction mode class on editor
       const editorPanel = document.getElementById('editorPanel');
       if (editorPanel) {
-        editorPanel.classList.toggle('correction-mode', nextMode === 'correccion');
+        const isCorrectionMode = nextMode === 'correccion';
+        const wasCorrectionMode = previousMode === 'correccion';
+        
+        editorPanel.classList.toggle('correction-mode', isCorrectionMode);
+        
+        // Si cambiamos a o desde modo corrección, toggle los elementos
+        if (isCorrectionMode !== wasCorrectionMode) {
+          toggleCorrectionMode(isCorrectionMode);
+        }
       }
     }
 
@@ -2323,83 +2428,142 @@
     
     let corrections = [];
     let correctionIdCounter = 0;
+    let activeErrorId = null;
+    const inputTextCorrectable = document.getElementById('inputTextCorrectable');
     
-    function simulateSpellCheck(text) {
-      // Simula la detección de errores ortográficos y de puntuación
-      // En producción, esto debería usar la API
-      const errors = [];
+    // Detectar errores en el texto (simulación - reemplazar con API real)
+    function detectErrors(text) {
+      if (!text) return [];
       
-      // Ejemplos de errores comunes
+      const errors = [];
+      const textLower = text.toLowerCase();
+      
+      // Diccionario de errores comunes
       const spellingErrors = {
-        'exitosa': { suggestion: 'exitosa', type: 'spelling' },
-        'exsitosa': { suggestion: 'exitosa', type: 'spelling' },
-        'abeses': { suggestion: 'a veces', type: 'spelling' },
-        'aver': { suggestion: 'a ver', type: 'spelling' },
-        'haber': { suggestion: 'a ver', type: 'spelling', context: 'cuando significa mirar' }
+        'exsitosa': 'exitosa',
+        'exitosa': 'exitosa', // Mantener para demostración
+        'exito': 'éxito',
+        'abeses': 'a veces',
+        'aver': 'a ver',
+        'haci': 'así',
+        'porke': 'porque',
+        'ke': 'que',
+        'kiero': 'quiero',
+        'tambien': 'también',
+        'mas': 'más',
+        'raul': 'Raúl'
       };
       
-      // Buscar errores de ortografía
-      const words = text.match(/\b[\wáéíóúñü]+\b/gi) || [];
-      words.forEach((word, index) => {
-        const lowerWord = word.toLowerCase();
-        if (spellingErrors[lowerWord]) {
+      // Buscar palabras con errores
+      const wordRegex = /\b[\wáéíóúñü]+\b/gi;
+      let match;
+      
+      while ((match = wordRegex.exec(text)) !== null) {
+        const word = match[0];
+        const wordLower = word.toLowerCase();
+        
+        if (spellingErrors[wordLower]) {
           errors.push({
             id: correctionIdCounter++,
-            type: spellingErrors[lowerWord].type,
+            type: 'spelling',
             errorText: word,
-            suggestion: spellingErrors[lowerWord].suggestion,
-            position: text.toLowerCase().indexOf(lowerWord),
-            message: `Posible error ortográfico`
+            suggestion: spellingErrors[wordLower],
+            start: match.index,
+            end: match.index + word.length,
+            message: 'Posible error ortográfico'
           });
         }
-      });
+      }
       
-      // Buscar errores de puntuación (falta de coma, punto, etc.)
-      // Detectar frases largas sin puntuación
-      const sentences = text.split(/[.!?]/);
-      sentences.forEach((sentence) => {
-        const trimmed = sentence.trim();
-        if (trimmed.length > 100) {
-          // Buscar conjunciones sin coma
-          const conjunctions = [' y ', ' e ', ' pero ', ' sin embargo ', ' aunque '];
-          conjunctions.forEach(conj => {
-            const regex = new RegExp(`(\\w+${conj}\\w+)`, 'gi');
-            const matches = trimmed.match(regex);
-            if (matches && matches.length > 0) {
-              // Sugerir agregar coma antes de la conjunción
-              const position = text.indexOf(trimmed);
-              if (position >= 0) {
-                errors.push({
-                  id: correctionIdCounter++,
-                  type: 'punctuation',
-                  errorText: conj.trim(),
-                  suggestion: `, ${conj.trim()}`,
-                  position: position + trimmed.indexOf(conj),
-                  message: 'Posible falta de puntuación'
-                });
-              }
-            }
-          });
-        }
-      });
+      // Detectar errores de puntuación (espacios antes de puntuación)
+      const punctuationRegex = /\s+([.,;:!?])/g;
+      while ((match = punctuationRegex.exec(text)) !== null) {
+        errors.push({
+          id: correctionIdCounter++,
+          type: 'punctuation',
+          errorText: match[0],
+          suggestion: match[1],
+          start: match.index,
+          end: match.index + match[0].length,
+          message: 'No debe haber espacio antes de la puntuación'
+        });
+      }
       
       return errors;
     }
     
-    function detectCorrections(text) {
-      if (!text || currentMode !== 'correccion') {
-        corrections = [];
-        renderCorrections();
+    // Obtener texto plano del div contenteditable
+    function getPlainText(element) {
+      return element.textContent || '';
+    }
+    
+    // Establecer texto con marcado de errores
+    function setTextWithErrors(text, errors) {
+      if (!text) {
+        inputTextCorrectable.innerHTML = '';
         return;
       }
       
-      // Simular detección de errores
-      corrections = simulateSpellCheck(text);
-      renderCorrections();
-      highlightErrors(text);
+      if (errors.length === 0) {
+        inputTextCorrectable.textContent = text;
+        return;
+      }
+      
+      // Ordenar errores por posición
+      const sortedErrors = [...errors].sort((a, b) => a.start - b.start);
+      
+      let html = '';
+      let lastIndex = 0;
+      
+      sortedErrors.forEach(error => {
+        // Texto antes del error
+        html += escapeHtml(text.substring(lastIndex, error.start));
+        
+        // Error marcado
+        const errorClass = error.type === 'spelling' 
+          ? 'correction-error correction-error-spelling' 
+          : 'correction-error correction-error-punctuation';
+        
+        const activeClass = activeErrorId === error.id ? ' active' : '';
+        
+        html += `<span class="${errorClass}${activeClass}" data-error-id="${error.id}">${escapeHtml(error.errorText)}</span>`;
+        
+        lastIndex = error.end;
+      });
+      
+      // Texto restante
+      html += escapeHtml(text.substring(lastIndex));
+      
+      // Guardar posición del cursor
+      const selection = window.getSelection();
+      const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+      const cursorOffset = range ? range.startOffset : 0;
+      
+      inputTextCorrectable.innerHTML = html;
+      
+      // Agregar event listeners a los errores
+      inputTextCorrectable.querySelectorAll('.correction-error').forEach(errorSpan => {
+        errorSpan.addEventListener('click', (e) => {
+          e.preventDefault();
+          const errorId = parseInt(errorSpan.dataset.errorId);
+          highlightError(errorId);
+        });
+      });
     }
     
-    function renderCorrections() {
+    // Detectar y mostrar correcciones
+    function checkCorrections() {
+      const text = getPlainText(inputTextCorrectable);
+      corrections = detectErrors(text);
+      renderCorrectionsList();
+      setTextWithErrors(text, corrections.filter(c => !c.ignored && !c.accepted));
+      
+      // Actualizar contador de caracteres
+      inputCharCount.textContent = `${text.length} caracteres`;
+    }
+    
+    // Renderizar lista de correcciones
+    function renderCorrectionsList() {
       const correctionList = document.getElementById('correctionList');
       const correctionCount = document.getElementById('correctionCount');
       
@@ -2412,31 +2576,35 @@
         correctionList.innerHTML = `
           <div class="no-corrections">
             <div class="no-corrections-icon">✓</div>
-            <div>No se encontraron errores</div>
+            <div><strong>No se encontraron errores</strong></div>
           </div>
         `;
         return;
       }
       
-      correctionList.innerHTML = activeCorrections.map(correction => {
-        const typeLabel = correction.type === 'spelling' ? 'Ortografía inadecuada' : 'Puntuación';
-        const iconClass = correction.type === 'spelling' ? 'correction-icon-spelling' : 'correction-icon-punctuation';
+      correctionList.innerHTML = activeCorrections.map(error => {
+        const typeLabel = error.type === 'spelling' ? 'Ortografía inadecuada' : 'Puntuación';
+        const iconClass = error.type === 'spelling' ? 'correction-icon-spelling' : 'correction-icon-punctuation';
+        const isActive = activeErrorId === error.id;
         
         return `
-          <div class="correction-item" data-correction-id="${correction.id}">
+          <div class="correction-item ${isActive ? 'active' : ''}" data-error-id="${error.id}">
             <div class="correction-item-header">
               <div class="correction-icon ${iconClass}"></div>
               <div class="correction-item-content">
                 <div class="correction-type">${typeLabel}</div>
-                <div class="correction-error-text">${escapeHtml(correction.errorText)}</div>
-                ${correction.message ? `<div class="correction-suggestion-text">${escapeHtml(correction.message)}</div>` : ''}
-                <div class="correction-suggestion">${escapeHtml(correction.suggestion)}</div>
+                <div class="correction-error-text">
+                  ${error.message}
+                </div>
+                <div class="correction-error-text">
+                  <span class="correction-error-word">${escapeHtml(error.errorText)}</span>
+                </div>
+                <div class="correction-suggestion" data-action="apply-suggestion">
+                  ${escapeHtml(error.suggestion)}
+                </div>
                 <div class="correction-actions">
-                  <button class="correction-btn correction-btn-accept" data-action="accept">
-                    ${correction.suggestion}
-                  </button>
                   <button class="correction-btn" data-action="ignore">
-                    Ignorar en este texto
+                    Ignorar
                   </button>
                 </div>
               </div>
@@ -2445,101 +2613,138 @@
         `;
       }).join('');
       
-      // Agregar event listeners para los botones
+      // Agregar event listeners
       correctionList.querySelectorAll('.correction-item').forEach(item => {
-        const correctionId = parseInt(item.dataset.correctionId);
-        const correction = corrections.find(c => c.id === correctionId);
+        const errorId = parseInt(item.dataset.errorId);
         
-        if (!correction) return;
-        
-        item.querySelector('[data-action="accept"]')?.addEventListener('click', () => {
-          acceptCorrection(correctionId);
+        item.addEventListener('click', (e) => {
+          if (!e.target.closest('[data-action]')) {
+            highlightError(errorId);
+          }
         });
         
-        item.querySelector('[data-action="ignore"]')?.addEventListener('click', () => {
-          ignoreCorrection(correctionId);
-        });
+        const suggestionBtn = item.querySelector('[data-action="apply-suggestion"]');
+        if (suggestionBtn) {
+          suggestionBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            applySuggestion(errorId);
+          });
+        }
+        
+        const ignoreBtn = item.querySelector('[data-action="ignore"]');
+        if (ignoreBtn) {
+          ignoreBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            ignoreError(errorId);
+          });
+        }
       });
     }
     
-    function highlightErrors(text) {
-      if (currentMode !== 'correccion' || !text) {
-        setOutputHtml(escapeHtml(text));
-        return;
-      }
+    // Resaltar un error específico
+    function highlightError(errorId) {
+      activeErrorId = errorId;
       
-      const activeCorrections = corrections.filter(c => !c.ignored && !c.accepted);
-      if (activeCorrections.length === 0) {
-        setOutputHtml(escapeHtml(text));
-        return;
-      }
-      
-      // Ordenar correcciones por posición (de mayor a menor para no alterar posiciones)
-      const sorted = [...activeCorrections].sort((a, b) => b.position - a.position);
-      
-      let result = text;
-      sorted.forEach(correction => {
-        const errorClass = correction.type === 'spelling' ? 'correction-error-spelling' : 'correction-error-punctuation';
-        const before = result.substring(0, correction.position);
-        const error = result.substring(correction.position, correction.position + correction.errorText.length);
-        const after = result.substring(correction.position + correction.errorText.length);
-        
-        result = before + `<span class="correction-error ${errorClass}" data-correction-id="${correction.id}">${escapeHtml(error)}</span>` + after;
+      // Actualizar clases en la lista
+      document.querySelectorAll('.correction-item').forEach(item => {
+        item.classList.toggle('active', parseInt(item.dataset.errorId) === errorId);
       });
       
-      setOutputHtml(result);
+      // Actualizar clases en el texto
+      inputTextCorrectable.querySelectorAll('.correction-error').forEach(span => {
+        span.classList.toggle('active', parseInt(span.dataset.errorId) === errorId);
+      });
+      
+      // Scroll al error en el texto
+      const errorSpan = inputTextCorrectable.querySelector(`[data-error-id="${errorId}"]`);
+      if (errorSpan) {
+        errorSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
     }
     
-    function acceptCorrection(correctionId) {
-      const correction = corrections.find(c => c.id === correctionId);
-      if (!correction) return;
+    // Aplicar sugerencia
+    function applySuggestion(errorId) {
+      const error = corrections.find(e => e.id === errorId);
+      if (!error) return;
       
-      // Aplicar la corrección al texto
-      let currentText = output.textContent || '';
-      const before = currentText.substring(0, correction.position);
-      const after = currentText.substring(correction.position + correction.errorText.length);
-      const newText = before + correction.suggestion + after;
+      const text = getPlainText(inputTextCorrectable);
+      const before = text.substring(0, error.start);
+      const after = text.substring(error.end);
+      const newText = before + error.suggestion + after;
       
-      // Actualizar la posición de otras correcciones
-      const lengthDiff = correction.suggestion.length - correction.errorText.length;
-      corrections.forEach(c => {
-        if (c.position > correction.position) {
-          c.position += lengthDiff;
+      // Actualizar posiciones de otros errores
+      const diff = error.suggestion.length - error.errorText.length;
+      corrections.forEach(e => {
+        if (e.start > error.start) {
+          e.start += diff;
+          e.end += diff;
         }
       });
       
-      correction.accepted = true;
+      // Marcar como aceptado
+      error.accepted = true;
+      activeErrorId = null;
       
-      // Actualizar el input con el texto corregido
-      input.value = newText;
+      // Actualizar texto
+      inputTextCorrectable.textContent = newText;
       
-      // Re-detectar errores con el nuevo texto
-      detectCorrections(newText);
-      
-      inputCharCount.textContent = `${newText.length} caracteres`;
+      // Re-chequear
+      setTimeout(() => checkCorrections(), 100);
     }
     
-    function ignoreCorrection(correctionId) {
-      const correction = corrections.find(c => c.id === correctionId);
-      if (!correction) return;
+    // Ignorar error
+    function ignoreError(errorId) {
+      const error = corrections.find(e => e.id === errorId);
+      if (!error) return;
       
-      correction.ignored = true;
-      renderCorrections();
-      highlightErrors(input.value);
+      error.ignored = true;
+      activeErrorId = null;
+      
+      const text = getPlainText(inputTextCorrectable);
+      renderCorrectionsList();
+      setTextWithErrors(text, corrections.filter(c => !c.ignored && !c.accepted));
     }
     
-    // Detectar errores cuando cambia el texto de entrada en modo corrección
-    input.addEventListener('input', () => {
-      const text = input.value.trim();
-      inputCharCount.textContent = `${text.length} caracteres`;
-      
-      if (currentMode === 'correccion') {
-        // Debounce para no hacer demasiadas detecciones
-        clearTimeout(input.correctionTimeout);
-        input.correctionTimeout = setTimeout(() => {
-          detectCorrections(text);
-        }, 500);
+    // Toggle entre modo normal y modo corrección
+    function toggleCorrectionMode(isCorrectionMode) {
+      if (isCorrectionMode) {
+        // Copiar texto del textarea al div editable
+        const text = input.value;
+        inputTextCorrectable.textContent = text;
+        input.style.display = 'none';
+        inputTextCorrectable.style.display = 'block';
+        
+        // Iniciar chequeo
+        checkCorrections();
+      } else {
+        // Copiar texto del div editable al textarea
+        const text = getPlainText(inputTextCorrectable);
+        input.value = text;
+        inputTextCorrectable.style.display = 'none';
+        input.style.display = 'block';
+        
+        // Limpiar correcciones
+        corrections = [];
+        activeErrorId = null;
       }
+    }
+    
+    // Event listener para cambios en el texto editable
+    let correctionTimeout;
+    inputTextCorrectable.addEventListener('input', () => {
+      clearTimeout(correctionTimeout);
+      correctionTimeout = setTimeout(() => {
+        if (currentMode === 'correccion') {
+          checkCorrections();
+        }
+      }, 800);
+    });
+    
+    // Prevenir que se pegue HTML formateado
+    inputTextCorrectable.addEventListener('paste', (e) => {
+      e.preventDefault();
+      const text = (e.clipboardData || window.clipboardData).getData('text/plain');
+      document.execCommand('insertText', false, text);
     });
     
     // Inicializar modo corrección si es el modo activo
@@ -2549,6 +2754,7 @@
       const editorPanel = document.getElementById('editorPanel');
       if (editorPanel) {
         editorPanel.classList.add('correction-mode');
+        toggleCorrectionMode(true);
       }
     }
 
