@@ -903,9 +903,21 @@
     .correction-error:hover {
       background: rgba(11, 87, 208, 0.25);
     }
+    
+    /* Error activo resaltado */
+    .correction-error.active {
+      background: rgba(11, 87, 208, 0.3) !important;
+      border-bottom-width: 3px;
+      font-weight: 600;
+    }
 
     .correction-error-spelling {
       background: rgba(234, 67, 53, 0.15);
+      border-bottom-color: #ea4335;
+    }
+    
+    .correction-error-spelling.active {
+      background: rgba(234, 67, 53, 0.3) !important;
       border-bottom-color: #ea4335;
     }
 
@@ -915,6 +927,11 @@
 
     .correction-error-punctuation {
       background: rgba(251, 188, 4, 0.15);
+      border-bottom-color: #fbbc04;
+    }
+    
+    .correction-error-punctuation.active {
+      background: rgba(251, 188, 4, 0.3) !important;
       border-bottom-color: #fbbc04;
     }
 
@@ -941,6 +958,23 @@
       outline: none;
       /* Scroll suave */
       scroll-behavior: smooth;
+      transition: color 0.2s ease;
+    }
+    
+    /* Efecto de texto atenuado cuando hay un error seleccionado (como LanguageTool) */
+    .input-with-corrections.dimmed-text {
+      color: rgba(0, 0, 0, 0.3);
+    }
+    
+    /* El error activo mantiene su color normal */
+    .input-with-corrections.dimmed-text .correction-error.active {
+      color: inherit;
+      opacity: 1;
+    }
+    
+    /* Los demás errores también se atenúan */
+    .input-with-corrections.dimmed-text .correction-error:not(.active) {
+      opacity: 0.4;
     }
     
     /* Scrollbar personalizado para el input editable */
@@ -1031,7 +1065,7 @@
       padding: 12px;
       display: flex;
       flex-direction: column;
-      gap: 10px;
+      gap: 6px;  /* Más compacto, era 10px */
       /* Scroll suave */
       scroll-behavior: smooth;
       /* Personalizar scrollbar para que se vea mejor */
@@ -1058,29 +1092,61 @@
 
     .correction-item {
       background: #fff;
-      border-radius: 12px;
-      padding: 14px;
+      border-radius: 8px;
+      padding: 10px 12px;
       border: 1px solid #e0e0e0;
       transition: all 0.2s ease;
       cursor: pointer;
+      /* Compacto por defecto */
     }
 
     .correction-item:hover {
       border-color: #0b57d0;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
     }
 
     .correction-item.active {
       border-color: #0b57d0;
       background: #f8fbff;
       box-shadow: 0 2px 8px rgba(11, 87, 208, 0.15);
+      padding: 14px;
     }
 
     .correction-item-header {
       display: flex;
-      align-items: flex-start;
+      align-items: center;
       gap: 10px;
-      margin-bottom: 10px;
+    }
+    
+    /* Ocultar contenido expandido por defecto */
+    .correction-item-content {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    /* Texto compacto de una línea */
+    .correction-compact-text {
+      font-size: 14px;
+      color: #202124;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    /* Ocultar detalles cuando está colapsado */
+    .correction-item:not(.active) .correction-type,
+    .correction-item:not(.active) .correction-error-text,
+    .correction-item:not(.active) .correction-suggestion,
+    .correction-item:not(.active) .correction-actions {
+      display: none;
+    }
+    
+    /* Mostrar solo texto compacto cuando está colapsado */
+    .correction-item.active .correction-compact-text {
+      display: none;
     }
 
     .correction-icon {
@@ -1088,7 +1154,6 @@
       height: 8px;
       border-radius: 50%;
       flex-shrink: 0;
-      margin-top: 6px;
     }
 
     .correction-icon-spelling {
@@ -1097,11 +1162,6 @@
 
     .correction-icon-punctuation {
       background: #fbbc04;
-    }
-
-    .correction-item-content {
-      flex: 1;
-      min-width: 0;
     }
 
     .correction-type {
@@ -1114,7 +1174,7 @@
     }
 
     .correction-error-text {
-      font-size: 15px;
+      font-size: 14px;
       color: #202124;
       font-weight: 400;
       margin-bottom: 8px;
@@ -1145,9 +1205,39 @@
       font-size: 14px;
       font-weight: 500;
       display: inline-block;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
+      margin-right: 6px;
       word-break: break-word;
       cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .correction-suggestion:hover {
+      background: #d2e3fc;
+    }
+
+    .correction-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .correction-btn {
+      padding: 6px 12px;
+      border: 1px solid #dadce0;
+      background: #fff;
+      color: #5f6368;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      font-weight: 500;
+    }
+
+    .correction-btn:hover {
+      background: #f8f9fa;
+      border-color: #c1c1c1;
+    }
       transition: background 0.2s ease;
     }
 
@@ -2730,6 +2820,9 @@
           : 'correction-icon-punctuation';
         const isActive = activeErrorId === error.id;
         
+        // Texto compacto para mostrar cuando está colapsado
+        const compactText = `${error.errorText} → ${error.suggestion}`;
+        
         // Generar HTML para todas las sugerencias
         const allSuggestions = error.allSuggestions || [error.suggestion];
         const suggestionsHTML = allSuggestions
@@ -2746,6 +2839,14 @@
             <div class="correction-item-header">
               <div class="correction-icon ${iconClass}"></div>
               <div class="correction-item-content">
+                <!-- Texto compacto (solo visible cuando NO está activo) -->
+                <div class="correction-compact-text">
+                  <span style="color: #ea4335; font-weight: 500;">${escapeHtml(error.errorText)}</span>
+                  <span style="color: #5f6368;">→</span>
+                  <span style="color: #0b57d0; font-weight: 500;">${escapeHtml(error.suggestion)}</span>
+                </div>
+                
+                <!-- Contenido expandido (solo visible cuando está activo) -->
                 <div class="correction-type">${typeLabel}</div>
                 <div class="correction-error-text">
                   ${escapeHtml(error.message)}
@@ -2756,7 +2857,7 @@
                 ${suggestionsHTML}
                 <div class="correction-actions">
                   <button class="correction-btn" data-action="ignore">
-                    Ignorar
+                    Ignorar en este texto
                   </button>
                 </div>
               </div>
@@ -2771,7 +2872,7 @@
         
         item.addEventListener('click', (e) => {
           if (!e.target.closest('[data-action]')) {
-            highlightError(errorId);
+            toggleErrorHighlight(errorId);
           }
         });
         
@@ -2794,25 +2895,52 @@
       });
     }
     
-    // Resaltar un error específico
-    function highlightError(errorId) {
-      activeErrorId = errorId;
-      
-      // Actualizar clases en la lista
-      document.querySelectorAll('.correction-item').forEach(item => {
-        item.classList.toggle('active', parseInt(item.dataset.errorId) === errorId);
-      });
-      
-      // Actualizar clases en el texto
-      inputTextCorrectable.querySelectorAll('.correction-error').forEach(span => {
-        span.classList.toggle('active', parseInt(span.dataset.errorId) === errorId);
-      });
-      
-      // Scroll al error en el texto
-      const errorSpan = inputTextCorrectable.querySelector(`[data-error-id="${errorId}"]`);
-      if (errorSpan) {
-        errorSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    // Toggle para expandir/colapsar error (como LanguageTool)
+    function toggleErrorHighlight(errorId) {
+      // Si ya está activo, colapsarlo
+      if (activeErrorId === errorId) {
+        activeErrorId = null;
+        
+        // Remover todas las clases active
+        document.querySelectorAll('.correction-item').forEach(item => {
+          item.classList.remove('active');
+        });
+        
+        inputTextCorrectable.querySelectorAll('.correction-error').forEach(span => {
+          span.classList.remove('active');
+        });
+        
+        // Remover efecto de texto atenuado
+        inputTextCorrectable.classList.remove('dimmed-text');
+        
+      } else {
+        // Expandir este error
+        activeErrorId = errorId;
+        
+        // Actualizar clases en la lista
+        document.querySelectorAll('.correction-item').forEach(item => {
+          item.classList.toggle('active', parseInt(item.dataset.errorId) === errorId);
+        });
+        
+        // Actualizar clases en el texto
+        inputTextCorrectable.querySelectorAll('.correction-error').forEach(span => {
+          span.classList.toggle('active', parseInt(span.dataset.errorId) === errorId);
+        });
+        
+        // Aplicar efecto de texto atenuado (como LanguageTool)
+        inputTextCorrectable.classList.add('dimmed-text');
+        
+        // Scroll al error en el texto
+        const errorSpan = inputTextCorrectable.querySelector(`[data-error-id="${errorId}"]`);
+        if (errorSpan) {
+          errorSpan.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
       }
+    }
+    
+    // Resaltar un error específico (mantener para compatibilidad)
+    function highlightError(errorId) {
+      toggleErrorHighlight(errorId);
     }
     
     // Aplicar sugerencia
