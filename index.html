@@ -609,6 +609,17 @@
       .editor {
         grid-template-columns: 1fr;
       }
+      
+      /* En móviles, el panel de correcciones aparece debajo */
+      .correction-mode .editor {
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      
+      .correction-mode .correction-panel {
+        /* En móvil, altura máxima más pequeña */
+        max-height: 400px;
+      }
     }
 
     .kebab-wrap{
@@ -863,13 +874,20 @@
     }
 
     .correction-mode .input-panel {
-      height: auto;
-      flex: 1;
+      height: var(--editor-box-h);
+      flex: 0 0 auto;
+      min-height: 0;
     }
 
     .correction-mode #inputText {
+      display: none;
+    }
+    
+    .correction-mode .input-with-corrections {
       height: 100%;
-      min-height: 400px;
+      max-height: 100%;
+      overflow-y: auto;
+      overflow-x: hidden;
     }
 
     .correction-error {
@@ -917,9 +935,31 @@
       background: #ffffff;
       box-sizing: border-box;
       overflow-y: auto;
+      overflow-x: hidden;
       white-space: pre-wrap;
       word-wrap: break-word;
       outline: none;
+      /* Scroll suave */
+      scroll-behavior: smooth;
+    }
+    
+    /* Scrollbar personalizado para el input editable */
+    .input-with-corrections::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .input-with-corrections::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+    
+    .input-with-corrections::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 10px;
+    }
+    
+    .input-with-corrections::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
     }
 
     .input-with-corrections:focus {
@@ -944,7 +984,8 @@
       border-radius: 14px;
       border: 1px solid #e0e0e0;
       overflow: hidden;
-      height: 100%;
+      /* Altura máxima igual al editor de texto */
+      max-height: var(--editor-box-h);
     }
 
     .correction-mode .correction-panel {
@@ -986,10 +1027,33 @@
     .correction-list {
       flex: 1;
       overflow-y: auto;
+      overflow-x: hidden;
       padding: 12px;
       display: flex;
       flex-direction: column;
       gap: 10px;
+      /* Scroll suave */
+      scroll-behavior: smooth;
+      /* Personalizar scrollbar para que se vea mejor */
+    }
+    
+    /* Scrollbar personalizado para el panel de correcciones */
+    .correction-list::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .correction-list::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 10px;
+    }
+    
+    .correction-list::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 10px;
+    }
+    
+    .correction-list::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
     }
 
     .correction-item {
