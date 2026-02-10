@@ -1086,6 +1086,52 @@
       font-size: 14px;
       font-weight: 400;
     }
+
+    .correction-spinner {
+      width: 10px;
+      height: 10px;
+      border: 1.5px solid rgba(95, 99, 104, 0.35);
+      border-top-color: #5f6368;
+      border-radius: 50%;
+      display: inline-block;
+      animation: correctionSpin 0.8s linear infinite;
+      vertical-align: middle;
+    }
+
+    .correction-spinner[hidden] {
+      display: none !important;
+    }
+
+    @keyframes correctionSpin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    .correction-progress {
+      padding: 8px 20px 0;
+    }
+
+    .correction-list.fade-in {
+      animation: correctionFadeIn 150ms ease;
+    }
+
+    @keyframes correctionFadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .show-all-errors-btn {
+      margin: 4px 0 8px;
+      padding: 6px 10px;
+      font-size: 12px;
+      border-radius: 8px;
+      border: 1px solid #dadce0;
+      background: #fff;
+      color: #5f6368;
+      cursor: pointer;
+      align-self: flex-start;
+    }
     
     /* Botón Accept all estilo QuillBot */
     .accept-all-btn {
@@ -1427,11 +1473,13 @@
                 <span class="correction-count" id="correctionCount">0</span>
                 <span class="correction-label">grammar</span>
                 <span class="correction-suggestions">suggestions</span>
+                <span class="correction-spinner" id="correctionSpinner" hidden aria-hidden="true"></span>
               </div>
               <button class="accept-all-btn" id="acceptAllBtn" style="display: none;">
                 <span class="accept-all-icon">✓</span> Accept all
               </button>
             </div>
+            <div id="correctionProgress" class="status-label correction-progress" hidden></div>
             <div class="correction-list" id="correctionList">
               <div class="no-corrections">
                 <div class="no-corrections-icon">✓</div>
@@ -2626,6 +2674,11 @@
     };
     let activeCorrectionController = null;
     let latestCorrectionText = '';
+    const CORRECTION_PRIORITY = { spelling: 1, punctuation: 2, grammar: 3, style: 4 };
+    let progressTimeoutStep2 = null;
+    let progressTimeoutStep3 = null;
+    let isCorrectionLoading = false;
+    let showAllCorrections = false;
 
     function debounce(fn, ms){
       let t;
@@ -2635,15 +2688,64 @@
       }
     }
 
+    function clearProgressTimers() {
+      if (progressTimeoutStep2) {
+        clearTimeout(progressTimeoutStep2);
+        progressTimeoutStep2 = null;
+      }
+      if (progressTimeoutStep3) {
+        clearTimeout(progressTimeoutStep3);
+        progressTimeoutStep3 = null;
+      }
+    }
+
+    function setCorrectionLoadingState(isLoading) {
+      isCorrectionLoading = Boolean(isLoading);
+      const spinner = document.getElementById('correctionSpinner');
+      if (spinner) {
+        spinner.hidden = !isCorrectionLoading;
+      }
+    }
+
     function setCorrectionProgress(message = '') {
+      const correctionProgress = document.getElementById('correctionProgress');
       if (!message) {
         toggleStatus.textContent = '';
         syncStatusVisibility();
+        if (correctionProgress) {
+          correctionProgress.textContent = '';
+          correctionProgress.hidden = true;
+        }
         return;
       }
 
       toggleStatus.textContent = message;
       syncStatusVisibility();
+      if (correctionProgress) {
+        correctionProgress.textContent = message;
+        correctionProgress.hidden = false;
+      }
+    }
+
+    function startCorrectionProgressSequence() {
+      clearProgressTimers();
+      setCorrectionProgress('Analizando ortografía...');
+      progressTimeoutStep2 = setTimeout(() => {
+        setCorrectionProgress('Buscando problemas de gramática...');
+      }, 800);
+      progressTimeoutStep3 = setTimeout(() => {
+        setCorrectionProgress('Generando sugerencias...');
+      }, 1600);
+    }
+
+    function finishCorrectionProgress() {
+      clearProgressTimers();
+      setCorrectionProgress('Análisis completado');
+      setTimeout(() => {
+        if (!isCorrectionLoading) {
+          setCorrectionProgress('');
+        }
+      }, 900);
     }
 
     function normalizeCorrectionErrors(errors) {
@@ -2674,9 +2776,15 @@
         }
       });
 
+      detectedErrors.sort((a, b) => {
+        const pa = CORRECTION_PRIORITY[a.type] || 99;
+        const pb = CORRECTION_PRIORITY[b.type] || 99;
+        if (pa !== pb) return pa - pb;
+        return a.start - b.start;
+      });
+
       corrections = detectedErrors;
-      toggleStatus.textContent = '';
-      syncStatusVisibility();
+      showAllCorrections = false;
       renderCorrectionsList();
     }
 
@@ -2701,6 +2809,8 @@
       const trimmedText = text.trim();
 
       if (trimmedText.length < 30) {
+        clearProgressTimers();
+        setCorrectionLoadingState(false);
         setCorrectionProgress('');
         return;
       }
@@ -2708,6 +2818,8 @@
       if (correctionCache.has(trimmedText)) {
         const cachedAiErrors = correctionCache.get(trimmedText) || [];
         renderErrors(mergeErrors(localErrors, cachedAiErrors));
+        clearProgressTimers();
+        setCorrectionLoadingState(false);
         setCorrectionProgress('');
         return;
       }
@@ -2715,11 +2827,13 @@
       if (activeCorrectionController) {
         activeCorrectionController.abort();
       }
+      clearProgressTimers();
 
       activeCorrectionController = new AbortController();
       const requestController = activeCorrectionController;
-      console.time('AI correction');
-      setCorrectionProgress('Analizando gramática avanzada...');
+      console.time('correction');
+      startCorrectionProgressSequence();
+      setCorrectionLoadingState(true);
 
       try {
         const response = await fetch('/api/correct', {
@@ -2732,6 +2846,7 @@
         if (!response.ok || !response.body) {
           console.error('[correction] Error en /api/correct:', response.status);
           setCorrectionProgress('No se pudo analizar el texto');
+          setCorrectionLoadingState(false);
           return;
         }
 
@@ -2755,7 +2870,7 @@
               const payload = JSON.parse(dataLine.slice(6));
 
               if (payload.type === 'status' || payload.type === 'progress') {
-                setCorrectionProgress(payload.message || 'Analizando gramática avanzada...');
+                setCorrectionProgress(payload.message || 'Analizando ortografía...');
               }
 
               if (payload.type === 'result') {
@@ -2769,7 +2884,8 @@
                 }
 
                 renderErrors(mergeErrors(localErrors, errors));
-                setCorrectionProgress('');
+                setCorrectionLoadingState(false);
+                finishCorrectionProgress();
               }
             } catch (parseError) {
               console.error('[correction] Error parseando stream:', parseError);
@@ -2780,12 +2896,16 @@
         if (error?.name !== 'AbortError') {
           console.error('[correction] Error ejecutando runAICorrection():', error);
           setCorrectionProgress('No se pudo analizar el texto');
+          setCorrectionLoadingState(false);
         }
       } finally {
-        console.timeEnd('AI correction');
+        console.timeEnd('correction');
         if (requestController?.signal?.aborted) {
+          setCorrectionLoadingState(false);
+          clearProgressTimers();
           setCorrectionProgress('');
         }
+        setCorrectionLoadingState(false);
         if (activeCorrectionController === requestController) {
           activeCorrectionController = null;
         }
@@ -3106,22 +3226,34 @@
       const correctionList = document.getElementById('correctionList');
       const correctionCount = document.getElementById('correctionCount');
       const acceptAllBtn = document.getElementById('acceptAllBtn');
-      
+
       if (!correctionList || !correctionCount) return;
-      
+
       const activeCorrections = corrections.filter(c => !c.ignored && !c.accepted);
-      correctionCount.textContent = activeCorrections.length;
-      
-      // Mostrar/ocultar botón Accept all
-      if (acceptAllBtn) {
-        if (activeCorrections.length > 0) {
-          acceptAllBtn.style.display = 'flex';
+
+      const groupedMap = new Map();
+      activeCorrections.forEach(error => {
+        const groupKey = `${(error.errorText || '').toLowerCase()}__${(error.suggestion || '').toLowerCase()}`;
+        if (!groupedMap.has(groupKey)) {
+          groupedMap.set(groupKey, {
+            ...error,
+            groupedCount: 1,
+            groupedErrorIds: [error.id]
+          });
         } else {
-          acceptAllBtn.style.display = 'none';
+          const group = groupedMap.get(groupKey);
+          group.groupedCount += 1;
+          group.groupedErrorIds.push(error.id);
         }
+      });
+
+      const groupedCorrections = Array.from(groupedMap.values());
+      correctionCount.textContent = groupedCorrections.length;
+
+      if (acceptAllBtn) {
+        acceptAllBtn.style.display = activeCorrections.length > 0 ? 'flex' : 'none';
       }
-      
-      // Si no hay texto en el input, no mostrar nada
+
       const currentText = getPlainText(inputTextCorrectable);
       if (!currentText || currentText.trim().length === 0) {
         correctionList.innerHTML = '';
@@ -3129,24 +3261,28 @@
         if (acceptAllBtn) acceptAllBtn.style.display = 'none';
         return;
       }
-      
-      // Si hay texto pero no errores
-      if (activeCorrections.length === 0) {
+
+      if (groupedCorrections.length === 0) {
         correctionList.innerHTML = `
           <div class="no-corrections">
             <div class="no-corrections-icon">✓</div>
             <div><strong>No se encontraron errores</strong></div>
           </div>
         `;
+        correctionList.classList.add('fade-in');
+        setTimeout(() => correctionList.classList.remove('fade-in'), 170);
         return;
       }
-      
-      // ESTILO QUILLBOT: Tarjetas colapsadas por defecto, expandibles al click
-      correctionList.innerHTML = activeCorrections.map(error => {
-        // Determinar el título del error estilo QuillBot
+
+      const hasOverflow = groupedCorrections.length > 5;
+      const visibleCorrections = (hasOverflow && !showAllCorrections)
+        ? groupedCorrections.slice(0, 5)
+        : groupedCorrections;
+
+      correctionList.innerHTML = visibleCorrections.map(error => {
         let errorTitle = 'Agrega una tilde';
-        const msg = error.message.toLowerCase();
-        
+        const msg = (error.message || '').toLowerCase();
+
         if (msg.includes('subjuntivo')) {
           errorTitle = 'Corrige el uso del subjuntivo';
         } else if (msg.includes('tiempo verbal')) {
@@ -3168,16 +3304,14 @@
         } else if (error.type === 'spelling') {
           errorTitle = 'Corrige la ortografía';
         } else {
-          // Usar el mensaje original si no hay match
-          errorTitle = error.message.charAt(0).toUpperCase() + error.message.slice(1);
+          errorTitle = (error.message || 'Error detectado').charAt(0).toUpperCase() + (error.message || 'Error detectado').slice(1);
         }
-        
-        // Obtener contexto (oración completa con palabra tachada)
+
         const context = getErrorContext(error, currentText);
-        
-        // Vista compacta con preview de contexto (como en la imagen deseado.png)
-        const compactView = getCompactPreview(error, currentText);
-        
+        const compactView = error.groupedCount > 1
+          ? `${escapeHtml(error.errorText)} → ${escapeHtml(error.suggestion)} (${error.groupedCount} veces)`
+          : getCompactPreview(error, currentText);
+
         return `
           <div class="quillbot-card" data-error-id="${error.id}">
             <div class="quillbot-card-header-wrapper">
@@ -3194,20 +3328,17 @@
                 </button>
               </div>
             </div>
-            
-            <!-- Vista compacta (visible por defecto) -->
+
             <div class="quillbot-compact-view">
               ${compactView}
             </div>
-            
-            <!-- Vista expandida (oculta por defecto) -->
+
             <div class="quillbot-card-body" style="display: none;">
               <div class="quillbot-context">
                 ${context}
               </div>
             </div>
-            
-            <!-- Botones (ocultos por defecto) -->
+
             <div class="quillbot-card-actions" style="display: none;">
               <button class="quillbot-btn quillbot-btn-accept" data-action="accept">
                 <span class="quillbot-btn-icon">✓</span> Accept
@@ -3219,20 +3350,34 @@
           </div>
         `;
       }).join('');
-      
-      // Agregar event listeners
+
+      if (hasOverflow) {
+        correctionList.insertAdjacentHTML('beforeend', `
+          <button type="button" id="toggleAllErrorsBtn" class="show-all-errors-btn">
+            ${showAllCorrections ? 'Mostrar menos' : 'Ver todos los errores'}
+          </button>
+        `);
+
+        const toggleAllErrorsBtn = document.getElementById('toggleAllErrorsBtn');
+        toggleAllErrorsBtn?.addEventListener('click', () => {
+          showAllCorrections = !showAllCorrections;
+          renderCorrectionsList();
+        });
+      }
+
+      correctionList.classList.add('fade-in');
+      setTimeout(() => correctionList.classList.remove('fade-in'), 170);
+
       correctionList.querySelectorAll('.quillbot-card').forEach(card => {
         const errorId = parseInt(card.dataset.errorId);
-        
-        // Toggle para expandir/colapsar (solo en el título, no en los botones)
+
         const header = card.querySelector('[data-action="toggle"]');
         if (header) {
-          header.addEventListener('click', (e) => {
+          header.addEventListener('click', () => {
             toggleCard(card);
           });
         }
-        
-        // Botón "Aceptar" en el header
+
         const acceptHeaderBtn = card.querySelector('[data-action="accept-header"]');
         if (acceptHeaderBtn) {
           acceptHeaderBtn.addEventListener('click', (e) => {
@@ -3243,8 +3388,7 @@
             }
           });
         }
-        
-        // Botón "Descartar" en el header
+
         const discardHeaderBtn = card.querySelector('[data-action="discard-header"]');
         if (discardHeaderBtn) {
           discardHeaderBtn.addEventListener('click', (e) => {
@@ -3252,8 +3396,7 @@
             ignoreError(errorId);
           });
         }
-        
-        // Botón "Accept" en el body (cuando está expandido)
+
         const acceptBtn = card.querySelector('[data-action="accept"]');
         if (acceptBtn) {
           acceptBtn.addEventListener('click', (e) => {
@@ -3264,8 +3407,7 @@
             }
           });
         }
-        
-        // Botón "Ignore" en el body (cuando está expandido)
+
         const ignoreBtn = card.querySelector('[data-action="ignore"]');
         if (ignoreBtn) {
           ignoreBtn.addEventListener('click', (e) => {
@@ -3275,7 +3417,7 @@
         }
       });
     }
-    
+
     // Función para expandir/colapsar una tarjeta
     function toggleCard(card) {
       // Toggle expanded class
@@ -3593,8 +3735,11 @@
         renderErrors(localErrors);
 
         if (text.trim().length >= 30) {
-          setCorrectionProgress('Analizando gramática avanzada...');
+          startCorrectionProgressSequence();
+          setCorrectionLoadingState(true);
         } else {
+          clearProgressTimers();
+          setCorrectionLoadingState(false);
           setCorrectionProgress('');
         }
 
