@@ -6,10 +6,25 @@ Detecta errores de:
 
 Responde SOLO con JSON válido, sin texto adicional.
 Para cada error:
+- errorText DEBE ser una subcadena exacta del texto de entrada (copia/pega exacto).
 - suggestion debe ser corta y directa.
-- start y end deben ser índices exactos (JS string indices) del fragmento en el texto original.
-- end siempre debe ser mayor que start.
-- type solo puede ser: spelling, punctuation o grammar.`;
+- type solo puede ser: spelling, punctuation o grammar.
+
+IMPORTANTE:
+- Incluye correcciones por tildes/diacríticos faltantes y por puntuación faltante/incorrecta.
+- Devuelve como máximo 12 errores.
+
+Ejemplo:
+Entrada: "el dijo como estas"
+Salida:
+{
+  "errors": [
+    { "errorText": "el", "suggestion": "Él", "type": "spelling" },
+    { "errorText": "dijo", "suggestion": "dijo:", "type": "punctuation" },
+    { "errorText": "como", "suggestion": "cómo", "type": "spelling" },
+    { "errorText": "estas", "suggestion": "estás", "type": "spelling" }
+  ]
+}`;
 
 const RESPONSE_SCHEMA = {
   type: "object",
@@ -23,14 +38,12 @@ const RESPONSE_SCHEMA = {
         properties: {
           errorText: { type: "string" },
           suggestion: { type: "string" },
-          start: { type: "integer" },
-          end: { type: "integer" },
           type: {
             type: "string",
             enum: ["spelling", "punctuation", "grammar"]
           }
         },
-        required: ["errorText", "suggestion", "start", "end", "type"]
+        required: ["errorText", "suggestion", "type"]
       }
     }
   },
@@ -70,44 +83,39 @@ function normalizeIndices(errors, sourceText) {
 
   const out = [];
 
-  for (const error of errors || []) {
-    const entry = { ...error };
-    const hasValidIndices = Number.isInteger(entry.start) && Number.isInteger(entry.end) && entry.end > entry.start;
+  for (const rawError of (errors || []).slice(0, 12)) {
+    const errorText = typeof rawError?.errorText === "string" ? rawError.errorText : "";
+    const suggestion = typeof rawError?.suggestion === "string" ? rawError.suggestion : "";
+    const type = ["spelling", "punctuation", "grammar"].includes(rawError?.type)
+      ? rawError.type
+      : "grammar";
 
-    if (!hasValidIndices) {
-      const needle = typeof entry.errorText === "string" ? entry.errorText : "";
-      if (!needle) continue;
+    if (!errorText) continue;
 
-      let idx = sourceText.indexOf(needle);
-      let matched = false;
-      while (idx !== -1) {
-        const end = idx + needle.length;
-        if (end > idx && !isOverlapping(idx, end)) {
-          entry.start = idx;
-          entry.end = end;
-          matched = true;
-          break;
-        }
-        idx = sourceText.indexOf(needle, idx + 1);
+    let idx = sourceText.indexOf(errorText);
+    let start = -1;
+    let end = -1;
+
+    while (idx !== -1) {
+      const candidateEnd = idx + errorText.length;
+      if (candidateEnd > idx && !isOverlapping(idx, candidateEnd)) {
+        start = idx;
+        end = candidateEnd;
+        break;
       }
-
-      if (!matched) continue;
+      idx = sourceText.indexOf(errorText, idx + 1);
     }
 
-    if (!Number.isInteger(entry.start) || !Number.isInteger(entry.end) || entry.end <= entry.start) {
-      continue;
-    }
+    if (start === -1 || end === -1) continue;
 
-    if (entry.start < 0 || entry.end > sourceText.length) {
-      continue;
-    }
-
-    if (isOverlapping(entry.start, entry.end)) {
-      continue;
-    }
-
-    markUsed(entry.start, entry.end);
-    out.push(entry);
+    markUsed(start, end);
+    out.push({
+      errorText,
+      suggestion,
+      type,
+      start,
+      end
+    });
   }
 
   return out;
