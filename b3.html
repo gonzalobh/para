@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Corrector de Gramática</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: #f8f9fa;
+      color: #1a1a1a;
+      line-height: 1.6;
+    }
+
+    .container {
+      display: flex;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    .editor-section {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background: white;
+      border-right: 1px solid #e5e7eb;
+    }
+
+    .editor-wrapper {
+      flex: 1;
+      padding: 2rem;
+      overflow-y: auto;
+      position: relative;
+    }
+
+    .editor-content {
+      max-width: 750px;
+      margin: 0 auto;
+      position: relative;
+    }
+
+    /* Contenteditable styling */
+    #textEditor {
+      min-height: 400px;
+      font-size: 18px;
+      line-height: 1.8;
+      color: #1a1a1a;
+      outline: none;
+      padding: 20px 0;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+
+    #textEditor:empty:before {
+      content: attr(data-placeholder);
+      color: #9ca3af;
+      pointer-events: none;
+    }
+
+    /* Error highlighting */
+    .error-underline {
+      background: transparent;
+      border-bottom: 2px solid #ef4444;
+      cursor: pointer;
+      position: relative;
+      border-radius: 2px;
+      text-decoration: none;
+    }
+
+    .error-underline:hover {
+      background: rgba(239, 68, 68, 0.08);
+    }
+
+    /* Suggestions Panel */
+    .suggestions-panel {
+      width: 400px;
+      background: white;
+      border-left: 1px solid #e5e7eb;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .suggestions-header {
+      padding: 1.5rem;
+      border-bottom: 1px solid #e5e7eb;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .suggestions-title {
+      font-size: 15px;
+      font-weight: 600;
+      color: #1a1a1a;
+    }
+
+    .error-count {
+      color: #ef4444;
+      font-weight: 600;
+    }
+
+    .accept-all-btn {
+      padding: 8px 16px;
+      background: white;
+      border: 1px solid #10b981;
+      color: #10b981;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .accept-all-btn:hover {
+      background: #f0fdf4;
+    }
+
+    .suggestions-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0.5rem;
+    }
+
+    .suggestion-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      overflow: hidden;
+      transition: all 0.2s;
+    }
+
+    .suggestion-card:hover {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .suggestion-header {
+      padding: 16px;
+      background: #fef2f2;
+      cursor: pointer;
+    }
+
+    .suggestion-type {
+      display: inline-block;
+      font-size: 12px;
+      font-weight: 600;
+      color: #ef4444;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .suggestion-context {
+      font-size: 15px;
+      color: #1a1a1a;
+      margin-bottom: 4px;
+      line-height: 1.6;
+    }
+
+    .suggestion-wrong {
+      text-decoration: line-through;
+      color: #ef4444;
+      margin-right: 4px;
+    }
+
+    .suggestion-correct {
+      color: #10b981;
+      font-weight: 600;
+    }
+
+    .suggestion-message {
+      font-size: 13px;
+      color: #6b7280;
+    }
+
+    .suggestion-actions {
+      padding: 12px 16px;
+      display: flex;
+      gap: 8px;
+      border-top: 1px solid #f3f4f6;
+    }
+
+    .btn-accept {
+      flex: 1;
+      padding: 8px 16px;
+      background: #10b981;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .btn-accept:hover {
+      background: #059669;
+    }
+
+    .btn-ignore {
+      padding: 8px 16px;
+      background: transparent;
+      color: #6b7280;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-ignore:hover {
+      background: #f3f4f6;
+      color: #1a1a1a;
+    }
+
+    /* No suggestions state */
+    .no-suggestions {
+      padding: 3rem 2rem;
+      text-align: center;
+      color: #9ca3af;
+    }
+
+    .no-suggestions-icon {
+      font-size: 48px;
+      margin-bottom: 1rem;
+      opacity: 0.5;
+    }
+
+    .no-suggestions-text {
+      font-size: 15px;
+    }
+
+    /* Loading state */
+    .loading {
+      padding: 2rem;
+      text-align: center;
+      color: #6b7280;
+    }
+
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid #f3f4f6;
+      border-top: 3px solid #10b981;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin: 0 auto 1rem;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Scrollbar styling */
+    .suggestions-list::-webkit-scrollbar,
+    .editor-wrapper::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .suggestions-list::-webkit-scrollbar-track,
+    .editor-wrapper::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .suggestions-list::-webkit-scrollbar-thumb,
+    .editor-wrapper::-webkit-scrollbar-thumb {
+      background: #d1d5db;
+      border-radius: 4px;
+    }
+
+    .suggestions-list::-webkit-scrollbar-thumb:hover,
+    .editor-wrapper::-webkit-scrollbar-thumb:hover {
+      background: #9ca3af;
+    }
+
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .suggestions-panel {
+        width: 350px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+
+      .suggestions-panel {
+        width: 100%;
+        max-height: 50vh;
+      }
+    }
+
+    /* Check icon */
+    .check-icon {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+    }
+
+    .check-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Editor Section -->
+    <div class="editor-section">
+      <div class="editor-wrapper">
+        <div class="editor-content">
+          <div 
+            id="textEditor" 
+            contenteditable="true" 
+            data-placeholder="Escribe o pega tu texto aquí..."
+            spellcheck="false"
+          ></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Suggestions Panel -->
+    <div class="suggestions-panel">
+      <div class="suggestions-header">
+        <div>
+          <div class="suggestions-title">
+            <span class="error-count" id="errorCount">0</span> grammar suggestions
+          </div>
+        </div>
+        <button class="accept-all-btn" id="acceptAllBtn" style="display: none;">
+          <span class="check-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </span>
+          Accept all
+        </button>
+      </div>
+      
+      <div class="suggestions-list" id="suggestionsList">
+        <div class="no-suggestions">
+          <div class="no-suggestions-icon">✓</div>
+          <div class="no-suggestions-text">No suggestions yet. Start typing to check your text.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Diccionario de correcciones
+    const corrections = {
+      // Verbos pretérito
+      'decidi': { correct: 'decidí', type: 'Spelling error', message: 'Falta tilde en verbo pretérito' },
+      'sali': { correct: 'salí', type: 'Spelling error', message: 'Falta tilde en verbo pretérito' },
+      'hable': { correct: 'hablé', type: 'Spelling error', message: 'Falta tilde en verbo pretérito' },
+      'camine': { correct: 'caminé', type: 'Spelling error', message: 'Falta tilde en verbo pretérito' },
+      'lleve': { correct: 'llevé', type: 'Spelling error', message: 'Falta tilde en verbo pretérito' },
+      'pense': { correct: 'pensé', type: 'Spelling error', message: 'Falta tilde en verbo pretérito' },
+      'segui': { correct: 'seguí', type: 'Spelling error', message: 'Falta tilde en verbo pretérito' },
+      'llego': { correct: 'llegó', type: 'Spelling error', message: 'Falta tilde en verbo pretérito' },
+      'salio': { correct: 'salió', type: 'Spelling error', message: 'Falta tilde en verbo pretérito' },
+      
+      // Verbos imperfecto  
+      'hacia': { correct: 'hacía', type: 'Spelling error', message: 'Falta tilde en verbo imperfecto' },
+      'habia': { correct: 'había', type: 'Spelling error', message: 'Falta tilde en verbo imperfecto' },
+      'tenia': { correct: 'tenía', type: 'Spelling error', message: 'Falta tilde en verbo imperfecto' },
+      'decia': { correct: 'decía', type: 'Spelling error', message: 'Falta tilde en verbo imperfecto' },
+      'veia': { correct: 'veía', type: 'Spelling error', message: 'Falta tilde en verbo imperfecto' },
+      
+      // Condicional
+      'seria': { correct: 'sería', type: 'Spelling error', message: 'Falta tilde en condicional' },
+      'estaria': { correct: 'estaría', type: 'Spelling error', message: 'Falta tilde en condicional' },
+      'mejoraria': { correct: 'mejoraría', type: 'Spelling error', message: 'Falta tilde en condicional' },
+      
+      // Pronombres y adverbios
+      'mas': { correct: 'más', type: 'Spelling error', message: 'Falta tilde en adverbio de cantidad' },
+      'dia': { correct: 'día', type: 'Spelling error', message: 'Falta tilde' },
+      'sabado': { correct: 'sábado', type: 'Spelling error', message: 'Falta tilde' },
+      
+      // Mayúsculas
+      'el sabado': { correct: 'El sábado', type: 'Replace with', message: 'Mayúscula al inicio de oración' },
+      'sin embargo': { correct: 'Sin embargo', type: 'Replace with', message: 'Mayúscula al inicio de oración' },
+      'durante': { correct: 'Durante', type: 'Replace with', message: 'Mayúscula al inicio de oración' },
+      'al final': { correct: 'Al final', type: 'Replace with', message: 'Mayúscula al inicio de oración' },
+    };
+
+    let errors = [];
+    let debounceTimer;
+    
+    const editor = document.getElementById('textEditor');
+    const suggestionsList = document.getElementById('suggestionsList');
+    const errorCount = document.getElementById('errorCount');
+    const acceptAllBtn = document.getElementById('acceptAllBtn');
+
+    // Sample text
+    const sampleText = `el sabado pasado decidi levantarme mas temprano de lo normal para aprovechar mejor el dia. sin embargo cuando sali de la casa me di cuenta que hacia mas frio de lo que pensaba y no llevaba una chaqueta adecuada. igual segui caminando hacia el centro, pensando que despues el clima mejoraria.
+
+durante el camino me encontre con un amigo que no veia hace mucho tiempo, hablamos un rato sobre nuestros trabajos y de como han cambiado las cosas ultimamente. el me conto que estaba pensando en cambiarse de ciudad por que sentia que ya no tenia muchas oportunidades donde vivia.
+
+al final del dia llegue cansado a la casa, con dolor de cabeza y un poco frustrado por no haber hecho todo lo que tenia planeado. aun asi me fui a dormir pensando que mañana seria un dia mejor.`;
+
+    // Initialize with sample text
+    editor.textContent = sampleText;
+    
+    // Event listeners
+    editor.addEventListener('input', handleInput);
+    acceptAllBtn.addEventListener('click', acceptAllSuggestions);
+
+    function handleInput() {
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        checkText();
+      }, 800);
+    }
+
+    function checkText() {
+      const text = editor.textContent;
+      
+      if (!text.trim()) {
+        errors = [];
+        renderSuggestions();
+        return;
+      }
+
+      showLoading();
+      
+      // Simulate API delay
+      setTimeout(() => {
+        errors = findErrors(text);
+        renderSuggestions();
+        highlightErrors();
+      }, 300);
+    }
+
+    function findErrors(text) {
+      const foundErrors = [];
+      const lowerText = text.toLowerCase();
+      
+      // Find all corrections
+      Object.keys(corrections).forEach(wrong => {
+        const regex = new RegExp(`\\b${wrong}\\b`, 'gi');
+        let match;
+        
+        while ((match = regex.exec(text)) !== null) {
+          const correction = corrections[wrong];
+          foundErrors.push({
+            offset: match.index,
+            length: match[0].length,
+            wrong: match[0],
+            correct: correction.correct,
+            type: correction.type,
+            message: correction.message,
+            context: getContext(text, match.index, match[0].length)
+          });
+        }
+      });
+      
+      return foundErrors.sort((a, b) => a.offset - b.offset);
+    }
+
+    function getContext(text, offset, length) {
+      const start = Math.max(0, offset - 30);
+      const end = Math.min(text.length, offset + length + 30);
+      return text.substring(start, end).trim();
+    }
+
+    function showLoading() {
+      suggestionsList.innerHTML = `
+        <div class="loading">
+          <div class="spinner"></div>
+          <div>Checking text...</div>
+        </div>
+      `;
+    }
+
+    function renderSuggestions() {
+      errorCount.textContent = errors.length;
+      
+      if (errors.length === 0) {
+        acceptAllBtn.style.display = 'none';
+        suggestionsList.innerHTML = `
+          <div class="no-suggestions">
+            <div class="no-suggestions-icon">✓</div>
+            <div class="no-suggestions-text">No grammar errors found!</div>
+          </div>
+        `;
+        return;
+      }
+
+      acceptAllBtn.style.display = 'flex';
+      
+      suggestionsList.innerHTML = errors.map((error, index) => {
+        const contextParts = error.context.split(error.wrong);
+        const before = contextParts[0] || '';
+        const after = contextParts.slice(1).join(error.wrong);
+        
+        return `
+          <div class="suggestion-card" id="suggestion-${index}">
+            <div class="suggestion-header">
+              <div class="suggestion-type">▸ ${error.type}</div>
+              <div class="suggestion-context">
+                ${before}<span class="suggestion-wrong">${error.wrong}</span> <span class="suggestion-correct">${error.correct}</span>${after}
+              </div>
+              <div class="suggestion-message">${error.message}</div>
+            </div>
+            <div class="suggestion-actions">
+              <button class="btn-accept" onclick="acceptSuggestion(${index})">
+                <span class="check-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="20 6 9 17 4 12"></polyline>
+                  </svg>
+                </span>
+                Accept
+              </button>
+              <button class="btn-ignore" onclick="ignoreSuggestion(${index})">Ignore</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function highlightErrors() {
+      let html = editor.textContent;
+      const sortedErrors = [...errors].sort((a, b) => b.offset - a.offset);
+      
+      sortedErrors.forEach((error, index) => {
+        const before = html.substring(0, error.offset);
+        const errorText = html.substring(error.offset, error.offset + error.length);
+        const after = html.substring(error.offset + error.length);
+        
+        html = before + 
+               `<span class="error-underline" data-error-index="${errors.indexOf(error)}">${errorText}</span>` + 
+               after;
+      });
+      
+      // Save cursor position
+      const selection = window.getSelection();
+      const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+      const cursorOffset = range ? range.startOffset : 0;
+      
+      editor.innerHTML = html;
+      
+      // Restore cursor position (simplified)
+      if (range) {
+        try {
+          const newRange = document.createRange();
+          newRange.setStart(editor.firstChild || editor, Math.min(cursorOffset, editor.textContent.length));
+          newRange.collapse(true);
+          selection.removeAllRanges();
+          selection.addRange(newRange);
+        } catch (e) {
+          // Ignore cursor restoration errors
+        }
+      }
+    }
+
+    function acceptSuggestion(index) {
+      const error = errors[index];
+      const text = editor.textContent;
+      
+      const newText = text.substring(0, error.offset) + 
+                      error.correct + 
+                      text.substring(error.offset + error.length);
+      
+      editor.textContent = newText;
+      
+      // Recalculate errors
+      errors.splice(index, 1);
+      
+      // Update offsets for remaining errors
+      const lengthDiff = error.correct.length - error.length;
+      errors.forEach(e => {
+        if (e.offset > error.offset) {
+          e.offset += lengthDiff;
+        }
+      });
+      
+      renderSuggestions();
+      highlightErrors();
+    }
+
+    function ignoreSuggestion(index) {
+      errors.splice(index, 1);
+      renderSuggestions();
+      highlightErrors();
+    }
+
+    function acceptAllSuggestions() {
+      let text = editor.textContent;
+      
+      // Sort errors by offset in reverse to avoid position shifts
+      const sortedErrors = [...errors].sort((a, b) => b.offset - a.offset);
+      
+      sortedErrors.forEach(error => {
+        text = text.substring(0, error.offset) + 
+               error.correct + 
+               text.substring(error.offset + error.length);
+      });
+      
+      editor.textContent = text;
+      errors = [];
+      renderSuggestions();
+      highlightErrors();
+    }
+
+    // Initial check
+    checkText();
+  </script>
+</body>
+</html>
