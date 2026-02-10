@@ -3652,8 +3652,10 @@
           highlightingContainer.style.display = 'block';
         }
         
-        // Iniciar chequeo
-        checkCorrections();
+        // Iniciar chequeo INMEDIATAMENTE sin esperar
+        setTimeout(() => {
+          checkCorrections();
+        }, 50);
       } else {
         // Copiar texto del textarea correctable al textarea normal
         const text = getPlainText(inputTextCorrectable);
@@ -3681,7 +3683,7 @@
         if (currentMode === 'correccion') {
           checkCorrections();
         }
-      }, 800);
+      }, 200); // Reducido a 200ms para respuesta inmediata
     });
     
     // Prevenir que se pegue HTML formateado
@@ -3689,13 +3691,21 @@
       e.preventDefault();
       const text = (e.clipboardData || window.clipboardData).getData('text/plain');
       
-      // Para textarea usar execCommand
+      // Para textarea usar manipulación directa del value
       if (inputTextCorrectable.tagName === 'TEXTAREA') {
         const start = inputTextCorrectable.selectionStart;
         const end = inputTextCorrectable.selectionEnd;
         const currentValue = inputTextCorrectable.value;
         inputTextCorrectable.value = currentValue.substring(0, start) + text + currentValue.substring(end);
         inputTextCorrectable.selectionStart = inputTextCorrectable.selectionEnd = start + text.length;
+        
+        // Disparar detección INMEDIATAMENTE después de pegar
+        if (currentMode === 'correccion') {
+          // Cancelar el timeout previo si existe
+          clearTimeout(correctionTimeout);
+          // Detectar inmediatamente
+          checkCorrections();
+        }
       } else {
         document.execCommand('insertText', false, text);
       }
