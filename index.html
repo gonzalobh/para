@@ -1257,7 +1257,9 @@
     .correction-item:not(.active) .correction-type,
     .correction-item:not(.active) .correction-error-text,
     .correction-item:not(.active) .correction-suggestion,
-    .correction-item:not(.active) .correction-actions {
+    .correction-item:not(.active) .correction-actions,
+    .correction-item:not(.active) .smart-replace,
+    .correction-item:not(.active) .translation-bar {
       display: none;
     }
     
@@ -1611,16 +1613,6 @@
                 Corregir
                 <span class="correction-count" id="correctionCount">0</span>
               </div>
-              
-              <!-- Selector regional minimalista -->
-              <select id="regionSelector" class="region-selector" title="Variante regional">
-                <option value="neutral">Neutro</option>
-                <option value="es">España</option>
-                <option value="mx">México</option>
-                <option value="ar">Argentina</option>
-                <option value="co">Colombia</option>
-                <option value="cl">Chile</option>
-              </select>
             </div>
             
             <!-- Detector de tono (oculto por defecto) -->
@@ -3529,18 +3521,6 @@
       }
       return newText;
     }
-    
-    // Event listener para el selector regional
-    document.getElementById('regionSelector')?.addEventListener('change', function(e) {
-      const region = e.target.value;
-      const text = getPlainText(inputTextCorrectable);
-      const newText = applyRegionalVariant(text, region);
-      
-      if (newText !== text) {
-        inputTextCorrectable.textContent = newText;
-        setTimeout(() => checkCorrections(), 100);
-      }
-    });
     
     // ============================================
     // FEATURE 3: Smart Replace (Sinónimos)
