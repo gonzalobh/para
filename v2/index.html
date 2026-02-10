@@ -1,0 +1,2102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>para — parafrasear texto</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <style>
+    :root{
+      --editor-box-h: clamp(300px, 46vh, 520px);
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    [hidden] {
+      display: none !important;
+    }
+
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(180deg, #ffffff 0%, #f9f9f9 100%);
+      margin: 0;
+      min-height: 100vh;
+      color: #111;
+    }
+
+    .page {
+      min-height: 100vh;
+      padding: 40px;
+      box-sizing: border-box;
+    }
+
+    .container {
+      max-width: 1200px;
+      min-height: 80vh;
+      display: flex;
+      flex-direction: column;
+      margin: 0 auto;
+      background: #fff;
+      padding: 28px;
+      border-radius: 24px;
+      border: 1px solid #f0f0f0;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.04);
+    }
+
+    .header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+
+    .header-left {
+      flex: 1;
+    }
+
+    h1 {
+      margin-top: 0;
+      margin-bottom: 6px;
+      font-size: 30px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: #8f8f8f;
+      font-size: 14px;
+    }
+
+    .history-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border: 1px solid #e0e0e0;
+      background: #fff;
+      color: #333;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+
+    .history-btn:hover {
+      background: #f9f9f9;
+      border-color: #ccc;
+    }
+
+    .history-btn svg {
+      width: 18px;
+      height: 18px;
+      stroke-width: 2;
+    }
+
+    #editorPanel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .modes {
+      display: flex;
+      width: fit-content;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+      background: #f5f5f5;
+      padding: 4px;
+      border-radius: 14px;
+    }
+
+    .modes button {
+      padding: 6px 12px;
+      font-size: 14px;
+      border-radius: 999px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      color: #585858;
+    }
+
+    .modes button.active {
+      background: #fff;
+      color: #111;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+
+    .mode-help {
+      margin: 0 0 16px;
+      font-size: 12px;
+      color: #8b8b8b;
+      line-height: 1.4;
+    }
+
+    .editor {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      flex-grow: 1;
+      align-items: stretch;
+      flex: 1;
+    }
+
+    .editor > div,
+    .output-panel {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    textarea,
+    .output {
+      width: 100%;
+      min-height: 0;
+      height: 100%;
+      padding: 16px;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 16px;
+      line-height: 1.6;
+      border-radius: 14px;
+      border: 1px solid #e0e0e0;
+      background: #ffffff;
+      box-sizing: border-box;
+      transition: all 0.2s ease;
+    }
+
+    textarea {
+      resize: none;
+      color: #111;
+    }
+
+    #inputText,
+    #outputText {
+      flex: 1;
+    }
+
+    textarea:focus {
+      border-color: #0b57d0;
+      background: #fff;
+      box-shadow: 0 0 0 4px rgba(11, 87, 208, 0.05);
+      outline: none;
+    }
+
+    .output:focus {
+      outline: none;
+      border-color: #111;
+    }
+
+    .drop-active textarea,
+    textarea.drop-active {
+      border-color: #0b57d0;
+      box-shadow: 0 0 0 4px rgba(11, 87, 208, 0.12);
+      background: #f8fbff;
+    }
+
+    .syn-word {
+      cursor: pointer;
+      border-radius: 8px;
+      padding: 1px 4px;
+      transition: background-color 0.15s ease;
+    }
+
+    .syn-word:hover {
+      background: rgba(11, 87, 208, 0.12);
+    }
+
+    .synonym-popover {
+      position: fixed;
+      z-index: 1000;
+      min-width: 180px;
+      max-width: 260px;
+      background: #fff;
+      border: 1px solid #eaeaea;
+      border-radius: 12px;
+      box-shadow: 0 14px 30px rgba(0, 0, 0, 0.12);
+      padding: 8px;
+      display: grid;
+      gap: 6px;
+    }
+
+    .synonym-popover button {
+      border: none;
+      border-radius: 8px;
+      background: #f7f7f7;
+      color: #333;
+      text-align: left;
+      padding: 8px 10px;
+      cursor: pointer;
+      font-size: 14px;
+    }
+
+    .synonym-popover button:hover {
+      background: #eef4ff;
+    }
+
+    .synonym-loading,
+    .synonym-empty {
+      color: #666;
+      font-size: 13px;
+      padding: 6px 8px;
+    }
+
+    .output-panel {
+      position: relative;
+      min-height: 0;
+    }
+
+    .input-panel {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      flex: 0 0 auto;
+      height: var(--editor-box-h);
+      min-height: 0;
+    }
+
+    .output {
+      white-space: pre-wrap;
+      color: rgba(0, 0, 0, 0.78);
+      background: #f5f5f5;
+    }
+
+    .output:empty::before {
+      content: attr(data-placeholder);
+      color: #888;
+    }
+
+    .added {
+      color: #15c;
+      font-weight: 500;
+    }
+
+    .diff-added {
+      color: #0b57d0;
+      text-decoration: underline;
+      text-decoration-thickness: 2px;
+      text-decoration-color: rgba(11, 87, 208, 0.65);
+      font-weight: 500;
+    }
+
+    .diff-removed {
+      color: #c62828;
+      text-decoration: line-through;
+      text-decoration-thickness: 2px;
+      text-decoration-color: rgba(198, 40, 40, 0.75);
+      opacity: 0.8;
+    }
+
+    .skeleton {
+      display: grid;
+      gap: 10px;
+      padding: 4px 0;
+    }
+
+    .skeleton-line {
+      height: 14px;
+      border-radius: 8px;
+      background: linear-gradient(90deg, #efefef 25%, #f9f9f9 50%, #efefef 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.4s infinite;
+    }
+
+    .skeleton-line:nth-child(1) { width: 96%; }
+    .skeleton-line:nth-child(2) { width: 88%; }
+    .skeleton-line:nth-child(3) { width: 92%; }
+    .skeleton-line:nth-child(4) { width: 76%; }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .secondary-btn {
+      border: 1px solid #ddd;
+      background: #fff;
+      color: #333;
+      border-radius: 999px;
+      font-size: 13px;
+      padding: 6px 12px;
+      cursor: pointer;
+    }
+
+    .secondary-btn.active {
+      border-color: #0b57d0;
+      color: #0b57d0;
+      background: #f4f8ff;
+    }
+
+    .translate-wrap {
+      position: relative;
+      display: inline-flex;
+    }
+
+    .translate-menu {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      min-width: 140px;
+      background: #fff;
+      border: 1px solid #eaeaea;
+      border-radius: 12px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+      padding: 6px;
+      display: grid;
+      gap: 4px;
+      z-index: 100;
+    }
+
+    .translate-menu button {
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: #333;
+      text-align: left;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.15s ease;
+    }
+
+    .translate-menu button:hover {
+      background: #f5f5f5;
+    }
+
+    .translate-menu button.active {
+      background: #eef4ff;
+      color: #0b57d0;
+    }
+
+    .translate-banner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #eef4ff;
+      border: 1px solid #d4e4ff;
+      border-radius: 10px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: #0b57d0;
+    }
+
+    .translate-banner-left {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .translate-banner button {
+      border: none;
+      background: transparent;
+      color: #0b57d0;
+      cursor: pointer;
+      font-size: 13px;
+      text-decoration: underline;
+      padding: 0;
+    }
+
+    .translate-banner button:hover {
+      color: #084298;
+    }
+
+    .status-label {
+      font-size: 12px;
+      color: #8b8b8b;
+      line-height: 1.4;
+    }
+
+    .meta {
+      margin-top: 8px;
+      font-size: 12px;
+      color: #8b8b8b;
+      line-height: 1.4;
+    }
+
+    .meta:empty {
+      display: none;
+    }
+
+    .copy-btn {
+      position: absolute;
+      right: 12px;
+      bottom: 12px;
+      border: none;
+      border-radius: 999px;
+      padding: 6px 10px;
+      font-size: 12px;
+      background: rgba(255, 255, 255, 0.9);
+      color: #444;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .history-list {
+      margin: 6px 0 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    @media (max-width: 900px) {
+      .history-list {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .history-item {
+      border: 1px solid #ededed;
+      border-radius: 12px;
+      background: #fff;
+      padding: 12px 14px;
+      cursor: pointer;
+    }
+
+    .history-item:hover {
+      border-color: #d9d9d9;
+      background: #fcfcfc;
+    }
+
+    .history-item-title {
+      margin: 0;
+      font-size: 13px;
+      color: #666;
+    }
+
+    .history-item-text {
+      margin: 6px 0 0;
+      font-size: 14px;
+      color: #111;
+      line-height: 1.5;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    #historyPanel {
+      max-height: 70vh;
+      overflow: auto;
+      padding-right: 6px;
+    }
+
+    .history-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .history-modal-content {
+      background: #fff;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 900px;
+      max-height: 80vh;
+      overflow: auto;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+    }
+
+    .history-modal-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #f0f0f0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      background: #fff;
+      z-index: 1;
+    }
+
+    .history-modal-title {
+      font-size: 20px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    .history-modal-body {
+      padding: 24px;
+    }
+
+    .history-close {
+      border: none;
+      background: transparent;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+    }
+
+    .history-close:hover {
+      background: #f5f5f5;
+    }
+
+    .controls {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      margin-top: 16px;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .paraphrase-controls {
+      margin-top: 12px;
+      justify-content: center;
+    }
+
+    select {
+      padding: 8px 12px;
+      border-radius: 8px;
+      border: 1px solid #ddd;
+      font-size: 14px;
+    }
+
+    button#paraphrase {
+      padding: 13px 24px;
+      font-size: 16px;
+      border: none;
+      border-radius: 50px;
+      cursor: pointer;
+      background: #222;
+      color: #fff;
+      transition: background-color 0.2s ease;
+    }
+
+    button#paraphrase:hover {
+      background: #000;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    @media (max-width: 768px) {
+      .editor {
+        grid-template-columns: 1fr;
+      }
+      
+    }
+
+    .kebab-wrap{
+      position: relative;
+      display: inline-flex;
+    }
+
+    .kebab-btn{
+      width:34px;
+      height:34px;
+      border-radius:10px;
+      border:1px solid #e6e6e6;
+      background: rgba(255,255,255,0.95);
+      color:#222;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      line-height:1;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+    }
+    .kebab-btn:hover{ background:#fff; border-color:#d9d9d9; }
+
+    .kebab-menu{
+      position:absolute;
+      top:40px;
+      right:0;
+      min-width: 190px;
+      background:#fff;
+      border:1px solid #eaeaea;
+      border-radius: 12px;
+      box-shadow: 0 14px 30px rgba(0,0,0,0.12);
+      padding: 6px;
+      display:grid;
+      gap:6px;
+      z-index: 40;
+    }
+    .kebab-item{
+      border:none;
+      border-radius:10px;
+      background:#f7f7f7;
+      color:#111;
+      text-align:left;
+      padding:10px 10px;
+      cursor:pointer;
+      font-size:14px;
+    }
+    .kebab-item:hover{ background:#eef4ff; }
+    .kebab-item:disabled{ opacity:0.5; cursor:not-allowed; }
+
+    .copy-btn{ z-index: 25; }
+
+    /* Wrapper del cuadro de salida para anclar el botón Copiar */
+    .output-box{
+      position: relative;
+      flex: 0 0 auto;
+      height: var(--editor-box-h);
+      min-height: 0;
+      display: flex;
+    }
+
+    /* Asegura que el área editable ocupe toda la altura del wrapper */
+    .output-box .output{
+      height: 100%;
+      min-height: 0;
+    }
+
+    .input-panel textarea{
+      height: 100%;
+      min-height: 0;
+    }
+
+    /* Transición suave al ocultar columna izquierda */
+    .editor{
+      transition: grid-template-columns .25s ease, gap .25s ease;
+    }
+
+    /* Cuando se oculta la entrada, la salida ocupa todo */
+    .editor.hide-input{
+      grid-template-columns: 0 1fr;
+      gap: 0;
+    }
+
+    /* Oculta el panel izquierdo de forma suave y deshabilita interacción */
+    .editor.hide-input > div:first-child{
+      opacity: 0;
+      transform: translateX(-10px);
+      pointer-events: none;
+      overflow: hidden;
+      transition: opacity .2s ease, transform .25s ease;
+    }
+
+    /* Estado normal del panel izquierdo (para transición de vuelta) */
+    .editor > div:first-child{
+      transition: opacity .2s ease, transform .25s ease;
+    }
+
+    .modal-backdrop{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,0.35);
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      z-index: 1000;
+    }
+    .modal-card{
+      width: min(720px, 100%);
+      background:#fff;
+      border-radius: 18px;
+      border: 1px solid #ededed;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+      padding: 16px;
+    }
+    .modal-header{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .modal-title{ font-weight: 800; font-size: 16px; }
+    .modal-sub{ color:#8b8b8b; font-size: 12px; margin-top: 2px; }
+    .modal-close{
+      border:1px solid #e6e6e6;
+      background:#fff;
+      border-radius: 10px;
+      width: 34px;
+      height: 34px;
+      cursor:pointer;
+    }
+    .modal-controls{
+      display:flex;
+      justify-content:flex-start;
+      margin: 10px 0 8px 0;
+    }
+    .modal-select{
+      width: 240px;
+      max-width: 100%;
+      padding: 8px 10px;
+      border-radius: 10px;
+      border: 1px solid #e6e6e6;
+      background: #fff;
+      font-size: 13px;
+    }
+    .modal-loading{ color:#666; font-size: 13px; padding: 6px 2px; }
+    .modal-text{
+      width:100%;
+      min-height: 240px;
+      resize: vertical;
+      border-radius: 14px;
+      border: 1px solid #e0e0e0;
+      padding: 12px;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      box-sizing: border-box;
+    }
+    .modal-actions{
+      margin-top: 12px;
+      display:flex;
+      justify-content:flex-end;
+    }
+
+    .panel-header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:6px;
+      min-height: 34px;
+    }
+
+    .panel-title{
+      font-size:12px;
+      color:#8b8b8b;
+      font-weight:700;
+      letter-spacing:0.01em;
+    }
+
+    .panel-actions{
+      display:flex;
+      align-items:center;
+      flex-wrap: nowrap;
+      gap:8px;
+    }
+
+    .panel-status{
+      margin: 0;
+      min-height: 0;
+      display: none;
+    }
+
+    .output-panel.has-status .panel-status{
+      display: block;
+      margin: 0 0 6px;
+    }
+
+    .countries-wrap{
+      position: relative;
+      display: inline-flex;
+    }
+
+    .countries-menu{
+      position: absolute;
+      top: 40px;
+      left: 0;
+      min-width: 180px;
+      background: #fff;
+      border: 1px solid #eaeaea;
+      border-radius: 12px;
+      box-shadow: 0 14px 30px rgba(0,0,0,0.12);
+      padding: 6px;
+      display: grid;
+      gap: 6px;
+      z-index: 50;
+    }
+
+    .countries-item{
+      text-align: left;
+      padding: 10px 10px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      background: transparent;
+      cursor: pointer;
+      font: inherit;
+    }
+
+    .countries-item:hover{
+      background: rgba(0,0,0,0.04);
+    }
+
+    .countries-item.active{
+      background: rgba(0,0,0,0.06);
+      border-color: rgba(0,0,0,0.08);
+      font-weight: 600;
+    }
+
+    .chev{
+      margin-left: 6px;
+      opacity: 0.6;
+    }
+
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="container">
+      <div class="header">
+        <div class="header-left">
+          <h1>para</h1>
+          <p class="subtitle">transform your text</p>
+        </div>
+        <button id="historyBtn" class="history-btn" type="button">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          Historial
+        </button>
+      </div>
+
+      <div id="editorPanel" class="tab-panel active">
+        <div class="modes" id="modeControls"></div>
+        <p id="modeHelp" class="mode-help" aria-live="polite"></p>
+
+        <div class="editor">
+          <div>
+            <div class="panel-header">
+              <div class="panel-title">Entrada</div>
+            </div>
+            <div class="panel-status" aria-hidden="true"></div>
+            <div class="input-panel">
+              <textarea id="inputText" placeholder="Ingresa el texto que quieres parafrasear..."></textarea>
+              <button id="copyInput" class="copy-btn" type="button" aria-label="Copiar entrada">Copiar</button>
+            </div>
+            <div class="controls paraphrase-controls">
+              <button id="paraphrase">Humanizar</button>
+            </div>
+            <div id="inputCharCount" class="meta">0 caracteres</div>
+          </div>
+
+          <div class="output-panel">
+            <div class="panel-header">
+              <div class="panel-title">Salida</div>
+
+              <div class="panel-actions">
+                <button id="toggleInput" class="secondary-btn" type="button">Ocultar entrada</button>
+
+                <button id="toggleChanges" type="button" class="secondary-btn" disabled>Ver cambios</button>
+
+                <div class="translate-wrap">
+                  <button id="translateBtn" class="secondary-btn" type="button" disabled>Traducir</button>
+                  <div id="translateMenu" class="translate-menu" hidden>
+                    <button type="button" data-lang="en">🇺🇸 Inglés</button>
+                    <button type="button" data-lang="fr">🇫🇷 Francés</button>
+                    <button type="button" data-lang="de">🇩🇪 Alemán</button>
+                    <button type="button" data-lang="pt">🇵🇹 Portugués</button>
+                  </div>
+                </div>
+
+                <div class="kebab-wrap">
+                  <button id="outputMenuBtn" class="kebab-btn" type="button" aria-label="Más opciones" aria-haspopup="true" aria-expanded="false">⋯</button>
+
+                  <div id="outputMenu" class="kebab-menu" role="menu" hidden>
+                    <button id="menuDownloadPdf" type="button" role="menuitem" class="kebab-item" disabled>Descargar PDF</button>
+                    <button id="menuDownloadDocx" type="button" role="menuitem" class="kebab-item" disabled>Descargar Word</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel-status">
+              <span id="toggleStatus" class="status-label"></span>
+            </div>
+
+            <div id="translateBanner" class="translate-banner" hidden>
+              <div class="translate-banner-left">
+                <span>🌐</span>
+                <span id="translateBannerText">Traducido a Inglés</span>
+              </div>
+              <button id="translateBannerClose" type="button">Volver al original</button>
+            </div>
+
+            <div class="output-box">
+              <div
+                id="outputText"
+                class="output"
+                data-placeholder="Aquí aparecerá el texto parafraseado"
+                contenteditable="true"
+              ></div>
+
+              <button id="copyOutput" class="copy-btn" type="button" aria-label="Copiar salida">Copiar</button>
+            </div>
+            <div id="outputCharCount" class="meta"></div>
+            <div id="similarityText" class="meta"></div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+  <div id="historyModal" class="history-modal" hidden>
+    <div class="history-modal-content">
+      <div class="history-modal-header">
+        <h2 class="history-modal-title">Historial</h2>
+        <button id="historyClose" class="history-close" type="button" aria-label="Cerrar">✕</button>
+      </div>
+      <div class="history-modal-body">
+        <p class="subtitle" style="margin-bottom:16px;">Últimas 10 paráfrasis guardadas localmente</p>
+        <ul id="historyList" class="history-list"></ul>
+      </div>
+    </div>
+  </div>
+
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.11.0/mammoth.browser.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/3.0.3/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docx@8.5.0/build/index.umd.js"></script>
+
+  <script>
+    const MODES = [
+      { key: "humanizar", label: "Humanizar", help: "Más natural y menos repetitivo." },
+      { key: "academico", label: "Académico", help: "Formal y objetivo." },
+      { key: "resumir", label: "Resumir", help: "Más corto, conserva lo esencial." },
+      { key: "creativo", label: "Creativo", help: "Más fluido y con estilo." },
+      { key: "simplificar", label: "Simplificar", help: "Explica fácil, frases cortas." },
+      { key: "chilenizar", label: "Chilenizar", help: "Español de Chile (sutil, sin caricatura)." },
+      { key: "mexicanizar", label: "Mexicanizar", help: "Español de México (sutil, sin caricatura)." },
+      { key: "argentinizar", label: "Argentinizar", help: "Español de Argentina (sutil, sin caricatura)." },
+      { key: "espanolizar", label: "Españolizar", help: "Español de España (sutil, sin caricatura)." }
+    ];
+    let currentMode = "humanizar";
+    const allowedModes = MODES.map(mode => mode.key);
+    const MODE_LABELS = Object.fromEntries(MODES.map(mode => [mode.key, mode.label]));
+    const MODE_HELP = Object.fromEntries(MODES.map(mode => [mode.key, mode.help]));
+    const MODE_LOADING = {
+      humanizar: "Humanizando…",
+      academico: "Redactando…",
+      resumir: "Resumiendo…",
+      creativo: "Creando…",
+      simplificar: "Simplificando…",
+      chilenizar: "Chilenizando…",
+      mexicanizar: "Mexicanizando…",
+      argentinizar: "Argentinizando…",
+      espanolizar: "Españolizando…"
+    };
+    const DIFF_TOKEN_LIMIT = 4000;
+    const COUNTRY_MODE_KEYS = ["chilenizar", "mexicanizar", "argentinizar", "espanolizar"];
+    const COUNTRY_MODE_LABELS = Object.freeze({
+      chilenizar: "Chilenizar",
+      mexicanizar: "Mexicanizar",
+      argentinizar: "Argentinizar",
+      espanolizar: "Españolizar"
+    });
+    const HISTORY_KEY = "para.history.v1";
+    const HISTORY_MAX_ITEMS = 10;
+    const MAX_DROP_FILE_SIZE = 5 * 1024 * 1024;
+
+    let diffViewEnabled = false;
+    let diffButtonBlocked = true;
+    let isManualEdited = false;
+    let isProgrammaticUpdate = false;
+    let hasReceivedFirstChunk = false;
+    let currentOriginalText = "";
+    let currentResultText = "";
+    let currentDiff = null;
+    let synonymPopover = null;
+    let synonymAnchor = null;
+    let synonymController = null;
+    const synonymCache = new Map();
+
+    function escapeHtml(str) {
+      if (typeof str !== "string") return "";
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function tokenize(text) {
+      return text.match(/\p{L}[\p{L}\p{N}_'-]*|\p{N}+|[^\s\p{L}\p{N}]|\s+/gu) || [];
+    }
+
+    function shouldJoinWithoutSpace(prev, curr) {
+      if (!prev || !curr) return false;
+      if (/^\s+$/.test(curr) || /^\s+$/.test(prev)) return false;
+
+      const closers = /^[.,;:!?%)\]»”’]+$/;
+      const openers = /^[(\[{«“‘¿¡]+$/;
+      const apostropheLike = /^[’']$/;
+
+      return closers.test(curr) || openers.test(prev) || apostropheLike.test(curr) || apostropheLike.test(prev);
+    }
+
+    function joinTokens(tokens) {
+      let text = "";
+      tokens.forEach((token, index) => {
+        if (!token) return;
+        if (text && !shouldJoinWithoutSpace(tokens[index - 1], token)) {
+          text += " ";
+        }
+        text += token;
+      });
+      return text;
+    }
+
+    function renderTokens(tokens, mode) {
+      let html = "";
+      const punctuationTokenRegex = /^[.,;:!?]+$/;
+      tokens.forEach((token, i) => {
+        if (!token?.value) return;
+
+        const escaped = escapeHtml(token.value);
+        let wrapped = escaped;
+
+        if (mode === "simple") {
+          if (token.type === "removed") return;
+          if (token.type === "added") {
+            const clickable = isEligibleSynonymToken(token.value);
+            if (clickable) {
+              const outIndexAttr = Number.isInteger(token.outIndex) ? ` data-out-index="${token.outIndex}"` : "";
+              wrapped = `<span class="added syn-word"${outIndexAttr} data-token="${escaped}">${escaped}</span>`;
+            } else {
+              wrapped = `<span class="added">${escaped}</span>`;
+            }
+          }
+        } else if (mode === "diff") {
+          if (token.type === "added") {
+            const clickable = isEligibleSynonymToken(token.value);
+            if (clickable) {
+              const outIndexAttr = Number.isInteger(token.outIndex) ? ` data-out-index="${token.outIndex}"` : "";
+              wrapped = `<span class="diff-added syn-word"${outIndexAttr} data-token="${escaped}">${escaped}</span>`;
+            } else {
+              wrapped = `<span class="diff-added">${escaped}</span>`;
+            }
+          } else if (token.type === "removed") {
+            wrapped = `<span class="diff-removed">${escaped}</span>`;
+          }
+        }
+
+        const isPunctuationToken = punctuationTokenRegex.test(token.value);
+        if (isPunctuationToken && /<\/span>$/.test(html)) {
+          html = html.replace(/<\/span>$/, `${escaped}</span>`);
+          return;
+        }
+
+        if (html.length > 0 && !isPunctuationToken && !shouldJoinWithoutSpace(tokens[i - 1]?.value, token.value)) {
+          html += " ";
+        }
+
+        html += wrapped;
+      });
+
+      return html;
+    }
+
+    function buildDiffData(originalText, paraphrasedText) {
+      const origTokens = tokenize(originalText).filter(t => !/^\s+$/.test(t));
+      const outTokens = tokenize(paraphrasedText).filter(t => !/^\s+$/.test(t));
+
+      if (!outTokens.length) {
+        return { tokens: [], outTokens: [], addedCount: 0, totalCount: 0, diffDisabled: false };
+      }
+
+      if (origTokens.length + outTokens.length > DIFF_TOKEN_LIMIT) {
+        return {
+          tokens: outTokens.map((token, idx) => ({ value: token, type: "equal", outIndex: idx })),
+          outTokens,
+          addedCount: 0,
+          totalCount: outTokens.length,
+          diffDisabled: true
+        };
+      }
+
+      const n = origTokens.length;
+      const m = outTokens.length;
+      const dp = Array.from({ length: n + 1 }, () => new Uint16Array(m + 1));
+
+      for (let i = n - 1; i >= 0; i--) {
+        for (let j = m - 1; j >= 0; j--) {
+          if (origTokens[i] === outTokens[j]) {
+            dp[i][j] = dp[i + 1][j + 1] + 1;
+          } else {
+            dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+          }
+        }
+      }
+
+      const tokens = [];
+      let i = 0;
+      let j = 0;
+
+      while (i < n && j < m) {
+        if (origTokens[i] === outTokens[j]) {
+          tokens.push({ value: outTokens[j], type: "equal", outIndex: j });
+          i++;
+          j++;
+        } else if (dp[i][j + 1] >= dp[i + 1][j]) {
+          tokens.push({ value: outTokens[j], type: "added", outIndex: j });
+          j++;
+        } else {
+          tokens.push({ value: origTokens[i], type: "removed" });
+          i++;
+        }
+      }
+
+      while (i < n) {
+        tokens.push({ value: origTokens[i], type: "removed" });
+        i++;
+      }
+
+      while (j < m) {
+        tokens.push({ value: outTokens[j], type: "added", outIndex: j });
+        j++;
+      }
+
+      const addedCount = tokens.filter(token => token.type === "added").length;
+      const totalCount = tokens.filter(token => token.type !== "removed").length;
+
+      return { tokens, outTokens, addedCount, totalCount, diffDisabled: false };
+    }
+
+    const modeControls = document.getElementById("modeControls");
+    const modeHelp = document.getElementById("modeHelp");
+    const input = document.getElementById("inputText");
+    const inputText = input;
+    const output = document.getElementById("outputText");
+    const editor = document.querySelector(".editor");
+    const btn = document.getElementById("paraphrase");
+    const copyInputBtn = document.getElementById("copyInput");
+    const copyBtn = document.getElementById("copyOutput");
+    const outputMenuBtn = document.getElementById("outputMenuBtn");
+    const outputMenu = document.getElementById("outputMenu");
+    const menuDownloadPdf = document.getElementById("menuDownloadPdf");
+    const menuDownloadDocx = document.getElementById("menuDownloadDocx");
+    const translateBtn = document.getElementById("translateBtn");
+    const translateMenu = document.getElementById("translateMenu");
+    const translateBanner = document.getElementById("translateBanner");
+    const translateBannerText = document.getElementById("translateBannerText");
+    const translateBannerClose = document.getElementById("translateBannerClose");
+    const inputCharCount = document.getElementById("inputCharCount");
+    const outputCharCount = document.getElementById("outputCharCount");
+    const similarityText = document.getElementById("similarityText");
+    const toggleChanges = document.getElementById("toggleChanges");
+    const toggleStatus = document.getElementById("toggleStatus");
+    const outputPanelEl = document.querySelector(".output-panel");
+    const toggleInputBtn = document.getElementById("toggleInput");
+
+    // Translation state
+    let currentTranslation = null; // { lang, text, original }
+    let isTranslated = false;
+
+    function syncStatusVisibility() {
+      if (!outputPanelEl || !toggleStatus) return;
+      const has = (toggleStatus.textContent || "").trim().length > 0;
+      outputPanelEl.classList.toggle("has-status", has);
+    }
+    const historyList = document.getElementById("historyList");
+    let inputHidden = false;
+
+    function renderModeControls() {
+      modeControls.innerHTML = `
+        ${MODES.filter(mode => !COUNTRY_MODE_KEYS.includes(mode.key)).map(mode => `
+          <button type="button" class="mode-btn" data-mode="${mode.key}">${mode.label}</button>
+        `).join("")}
+        <div class="countries-wrap">
+          <button id="countriesBtn" class="mode-btn" type="button" aria-haspopup="true" aria-expanded="false">
+            Países <span class="chev">▾</span>
+          </button>
+
+          <div id="countriesMenu" class="countries-menu" role="menu" hidden>
+            ${COUNTRY_MODE_KEYS.map((key) => `<button type="button" class="countries-item" data-mode="${key}" role="menuitem">${COUNTRY_MODE_LABELS[key]}</button>`).join("")}
+          </div>
+        </div>
+      `;
+
+      modeControls.querySelectorAll(".mode-btn[data-mode]").forEach((btnMode) => {
+        btnMode.addEventListener("click", () => {
+          setActiveMode(btnMode.dataset.mode);
+        });
+      });
+
+      const countriesBtn = document.getElementById("countriesBtn");
+      const countriesMenu = document.getElementById("countriesMenu");
+
+      if (countriesBtn && countriesMenu) {
+        countriesBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const isHidden = countriesMenu.hasAttribute("hidden");
+          if (isHidden) countriesMenu.removeAttribute("hidden");
+          else countriesMenu.setAttribute("hidden", "");
+          countriesBtn.setAttribute("aria-expanded", isHidden ? "true" : "false");
+        });
+
+        countriesMenu.querySelectorAll(".countries-item").forEach((countryButton) => {
+          countryButton.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const mode = countryButton.getAttribute("data-mode");
+            setActiveMode(mode);
+            countriesMenu.setAttribute("hidden", "");
+            countriesBtn.setAttribute("aria-expanded", "false");
+          });
+        });
+
+        document.addEventListener("click", () => {
+          if (!countriesMenu.hasAttribute("hidden")) {
+            countriesMenu.setAttribute("hidden", "");
+            countriesBtn.setAttribute("aria-expanded", "false");
+          }
+        });
+      }
+    }
+
+    function syncCountriesUI(activeMode) {
+      const countriesBtn = document.getElementById("countriesBtn");
+      const countriesMenu = document.getElementById("countriesMenu");
+      if (!countriesBtn || !countriesMenu) return;
+
+      countriesMenu.querySelectorAll(".countries-item").forEach((el) => {
+        el.classList.toggle("active", el.getAttribute("data-mode") === activeMode);
+      });
+
+      if (COUNTRY_MODE_LABELS[activeMode]) {
+        countriesBtn.innerHTML = `Países: ${COUNTRY_MODE_LABELS[activeMode]} <span class="chev">▾</span>`;
+      } else {
+        countriesBtn.innerHTML = `Países <span class="chev">▾</span>`;
+      }
+    }
+
+    function setParaphraseLabel(isLoading) {
+      const actionLabel = MODE_LABELS[currentMode] || "Humanizar";
+      const loadingLabel = MODE_LOADING[currentMode] || `${actionLabel}…`;
+      btn.textContent = isLoading ? loadingLabel : actionLabel;
+    }
+
+    function getSimilarityLabel(similarity) {
+      if (similarity >= 80) return "Cambios leves";
+      if (similarity >= 60) return "Cambios moderados";
+      return "Reescritura profunda";
+    }
+
+    function setOutputHtml(html) {
+      isProgrammaticUpdate = true;
+      output.innerHTML = html;
+      isProgrammaticUpdate = false;
+    }
+
+    function getVisibleOutputText() {
+      return (output.textContent || "").trim();
+    }
+
+    function updateExportButtons() {
+      const hasOutput = Boolean(getVisibleOutputText());
+      menuDownloadPdf.disabled = !hasOutput;
+      menuDownloadDocx.disabled = !hasOutput;
+      translateBtn.disabled = !hasOutput;
+
+      copyBtn.hidden = !hasOutput;
+      outputMenuBtn.hidden = !hasOutput;
+      toggleChanges.hidden = !hasOutput;
+      translateBtn.hidden = !hasOutput;
+
+      if (!hasOutput) {
+        outputMenu.hidden = true;
+        outputMenuBtn.setAttribute("aria-expanded", "false");
+        toggleStatus.textContent = "";
+        syncStatusVisibility();
+      }
+    }
+
+    function disableDiffButton(message = "") {
+      diffButtonBlocked = true;
+      diffViewEnabled = false;
+      toggleChanges.classList.remove("active");
+      toggleChanges.setAttribute("aria-pressed", "false");
+      toggleChanges.disabled = true;
+      toggleStatus.textContent = message;
+      syncStatusVisibility();
+    }
+
+    function enableDiffButton(message = "") {
+      diffButtonBlocked = false;
+      toggleChanges.disabled = false;
+      toggleStatus.textContent = message;
+      syncStatusVisibility();
+    }
+
+    function applyOutputView() {
+      if (!currentDiff) {
+        setOutputHtml(escapeHtml(currentResultText));
+      } else {
+        const mode = diffViewEnabled ? "diff" : "simple";
+        setOutputHtml(renderTokens(currentDiff.tokens, mode));
+      }
+      toggleChanges.classList.toggle("active", diffViewEnabled);
+      toggleChanges.setAttribute("aria-pressed", diffViewEnabled ? "true" : "false");
+      updateExportButtons();
+    }
+
+    function updateInputCount() {
+      inputCharCount.textContent = `${input.value.length} caracteres`;
+    }
+
+    function setActiveMode(mode) {
+      const nextMode = allowedModes.includes(mode) ? mode : "humanizar";
+      const previousMode = currentMode;
+      currentMode = nextMode;
+      modeControls.querySelectorAll(".mode-btn[data-mode]").forEach(button => button.classList.toggle("active", button.dataset.mode === nextMode));
+      syncCountriesUI(nextMode);
+      modeHelp.textContent = MODE_HELP[nextMode] || MODE_HELP.humanizar;
+      if (!btn.disabled) setParaphraseLabel(false);
+    }
+
+    function saveHistoryEntry(entry) {
+      const items = loadHistory();
+      items.unshift(entry);
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(items.slice(0, HISTORY_MAX_ITEMS)));
+      renderHistory();
+    }
+
+    function loadHistory() {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(HISTORY_KEY) || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function formatTimestamp(value) {
+      return new Date(value).toLocaleString("es-ES", { dateStyle: "short", timeStyle: "short" });
+    }
+
+    function renderHistory() {
+      const items = loadHistory();
+      historyList.innerHTML = "";
+
+      if (!items.length) {
+        historyList.innerHTML = '<li class="history-item" style="cursor:default;"><p class="history-item-title">Aún no hay historial</p><p class="history-item-text">Las paráfrasis recientes aparecerán aquí.</p></li>';
+        return;
+      }
+
+      items.forEach((item) => {
+        const safeResult = typeof item.result === "string" ? item.result : "";
+        const safeMode = allowedModes.includes(item.mode) ? item.mode : "humanizar";
+        const safeOriginal = typeof item.original === "string" ? item.original : "";
+        const modeLabel = MODE_LABELS[safeMode] || safeMode;
+
+        const li = document.createElement("li");
+        li.className = "history-item";
+        li.innerHTML = `
+          <p class="history-item-title">${escapeHtml(formatTimestamp(item.timestamp))} · ${escapeHtml(modeLabel)}</p>
+          <p class="history-item-text">${escapeHtml(safeResult.slice(0, 160))}${safeResult.length > 160 ? "…" : ""}</p>
+        `;
+
+        li.addEventListener("click", () => {
+          input.value = safeOriginal;
+          updateInputCount();
+          setActiveMode(safeMode);
+
+          currentOriginalText = safeOriginal;
+          currentResultText = safeResult;
+          currentDiff = buildDiffData(currentOriginalText, currentResultText);
+
+          isManualEdited = false;
+          diffViewEnabled = false;
+          applyOutputView();
+
+          if (currentDiff.diffDisabled) {
+            disableDiffButton("Cambios no disponibles por longitud del texto");
+          } else {
+            enableDiffButton("");
+          }
+
+          outputCharCount.textContent = `${safeResult.length} caracteres`;
+          const similarity = currentDiff.totalCount
+            ? Math.round(100 - (currentDiff.addedCount / currentDiff.totalCount) * 100)
+            : 100;
+          similarityText.textContent = getSimilarityLabel(similarity);
+          closeHistoryModal();
+        });
+
+        historyList.appendChild(li);
+      });
+    }
+
+    function showSkeleton() {
+      const html = `
+        <div class="skeleton" aria-hidden="true">
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+          <div class="skeleton-line"></div>
+        </div>
+      `;
+      setOutputHtml(html);
+    }
+
+    function isEligibleSynonymToken(word) {
+      if (!word || word.length < 2 || word.length > 40) return false;
+      if (!/[\p{L}]/u.test(word)) return false;
+      if (/^\d+(?:[.,]\d+)?$/.test(word)) return false;
+      if (/^[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+(?:[A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)*$/.test(word)) return false;
+      if (/^(https?:\/\/|www\.)/i.test(word)) return false;
+      if (/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(word)) return false;
+      return true;
+    }
+
+    function closeSynonymPopover() {
+      if (synonymController) {
+        synonymController.abort();
+        synonymController = null;
+      }
+      if (synonymPopover) {
+        synonymPopover.remove();
+        synonymPopover = null;
+      }
+      synonymAnchor = null;
+    }
+
+    function openSynonymPopover(anchor) {
+      closeSynonymPopover();
+      synonymAnchor = anchor;
+      const rect = anchor.getBoundingClientRect();
+      const popover = document.createElement("div");
+      popover.className = "synonym-popover";
+      popover.style.left = `${Math.min(window.innerWidth - 280, Math.max(8, rect.left))}px`;
+      popover.style.top = `${Math.min(window.innerHeight - 120, rect.bottom + 8)}px`;
+      popover.innerHTML = '<div class="synonym-loading">Cargando…</div>';
+      document.body.appendChild(popover);
+      synonymPopover = popover;
+      return popover;
+    }
+
+    function applyCapitalization(sourceWord, replacementWord) {
+      if (!sourceWord || !replacementWord) return replacementWord;
+      if (/^[A-ZÁÉÍÓÚÑ]/.test(sourceWord)) {
+        return replacementWord.charAt(0).toUpperCase() + replacementWord.slice(1);
+      }
+      return replacementWord;
+    }
+
+    async function fetchSynonyms(word, context) {
+      const key = `${word.toLowerCase()}|${context}`;
+      if (synonymCache.has(key)) return synonymCache.get(key);
+
+      synonymController = new AbortController();
+      try {
+        const response = await fetch("/api/synonyms", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ word, context, mode: currentMode }),
+          signal: synonymController.signal
+        });
+        const data = await response.json().catch(() => ({ synonyms: [] }));
+        const synonyms = Array.isArray(data.synonyms) ? data.synonyms.slice(0, 4) : [];
+        synonymCache.set(key, synonyms);
+        return synonyms;
+      } catch {
+        return [];
+      } finally {
+        synonymController = null;
+      }
+    }
+
+    async function onSynWordClick(event) {
+      const target = event.target.closest(".syn-word");
+      if (!target || !output.contains(target) || !currentDiff?.outTokens?.length) return;
+      const outIndex = Number.parseInt(target.dataset.outIndex, 10);
+      if (!Number.isInteger(outIndex) || outIndex < 0 || outIndex >= currentDiff.outTokens.length) return;
+
+      const currentWord = currentDiff.outTokens[outIndex];
+      if (!isEligibleSynonymToken(currentWord)) {
+        const pop = openSynonymPopover(target);
+        pop.innerHTML = '<div class="synonym-empty">Sin alternativas útiles</div>';
+        return;
+      }
+
+      if (synonymAnchor === target && synonymPopover) {
+        closeSynonymPopover();
+        return;
+      }
+
+      const popover = openSynonymPopover(target);
+      const context = joinTokens(currentDiff.outTokens.slice(Math.max(0, outIndex - 15), outIndex + 16)).slice(0, 900);
+      const synonyms = await fetchSynonyms(currentWord, context);
+      if (!synonymPopover || synonymAnchor !== target) return;
+
+      if (!synonyms.length) {
+        popover.innerHTML = '<div class="synonym-empty">Sin alternativas útiles</div>';
+        return;
+      }
+
+      popover.innerHTML = "";
+      synonyms.forEach((synonym) => {
+        const optionButton = document.createElement("button");
+        optionButton.type = "button";
+        optionButton.textContent = synonym;
+        optionButton.addEventListener("click", () => {
+          const outTokens = [...currentDiff.outTokens];
+          outTokens[outIndex] = applyCapitalization(currentWord, synonym);
+          currentResultText = joinTokens(outTokens);
+          currentDiff = buildDiffData(currentOriginalText, currentResultText);
+          diffViewEnabled = false;
+          applyOutputView();
+          outputCharCount.textContent = `${currentResultText.length} caracteres`;
+          const similarity = currentDiff.totalCount
+            ? Math.round(100 - (currentDiff.addedCount / currentDiff.totalCount) * 100)
+            : 100;
+          similarityText.textContent = getSimilarityLabel(similarity);
+          closeSynonymPopover();
+        });
+        popover.appendChild(optionButton);
+      });
+    }
+
+    function clearOutputState() {
+      currentOriginalText = "";
+      currentResultText = "";
+      currentDiff = null;
+      diffViewEnabled = false;
+      isManualEdited = false;
+      setOutputHtml("");
+      outputCharCount.textContent = "";
+      similarityText.textContent = "";
+      disableDiffButton("");
+      toggleStatus.textContent = "";
+      syncStatusVisibility();
+      updateExportButtons();
+      closeSynonymPopover();
+    }
+
+    async function extractFileText(file) {
+      if (!file) return "";
+      const name = file.name.toLowerCase();
+      if (file.size > MAX_DROP_FILE_SIZE) {
+        throw new Error("El archivo supera el límite de 5MB.");
+      }
+      if (name.endsWith(".txt")) {
+        return await file.text();
+      }
+      if (name.endsWith(".docx")) {
+        if (!window.mammoth) throw new Error("No se pudo cargar Mammoth para leer DOCX.");
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await window.mammoth.extractRawText({ arrayBuffer });
+        return result.value || "";
+      }
+      throw new Error("Solo se admiten archivos .txt o .docx.");
+    }
+
+    async function handleDroppedFile(file) {
+      try {
+        const text = await extractFileText(file);
+        if (!text.trim()) {
+          setOutputHtml("El archivo no contiene texto legible.");
+          return;
+        }
+        input.value = text;
+        updateInputCount();
+        clearOutputState();
+      } catch (error) {
+        setOutputHtml(escapeHtml(error.message || "No se pudo leer el archivo."));
+      }
+    }
+
+    function installDragAndDrop() {
+      let dragDepth = 0;
+      const activateDrop = () => {
+        editor.classList.add("drop-active");
+        input.classList.add("drop-active");
+      };
+      const clearDrop = () => {
+        editor.classList.remove("drop-active");
+        input.classList.remove("drop-active");
+      };
+
+      const onDragOver = (event) => {
+        event.preventDefault();
+        event.dataTransfer.dropEffect = "copy";
+      };
+
+      [editor, input].forEach((el) => {
+        el.addEventListener("dragenter", (event) => {
+          event.preventDefault();
+          dragDepth += 1;
+          activateDrop();
+        });
+        el.addEventListener("dragover", onDragOver);
+        el.addEventListener("dragleave", (event) => {
+          event.preventDefault();
+          dragDepth = Math.max(0, dragDepth - 1);
+          if (!dragDepth) clearDrop();
+        });
+        el.addEventListener("drop", async (event) => {
+          event.preventDefault();
+          dragDepth = 0;
+          clearDrop();
+          const file = event.dataTransfer?.files?.[0];
+          if (file) await handleDroppedFile(file);
+        });
+      });
+    }
+
+    function downloadPdf() {
+      const text = getVisibleOutputText();
+      if (!text || !window.jspdf?.jsPDF) return;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
+      const margin = 48;
+      const pageWidth = doc.internal.pageSize.getWidth() - margin * 2;
+      const pageHeight = doc.internal.pageSize.getHeight() - margin * 2;
+      const lines = doc.splitTextToSize(text, pageWidth);
+      let y = margin;
+      doc.setFontSize(12);
+      lines.forEach((line) => {
+        if (y > margin + pageHeight) {
+          doc.addPage();
+          y = margin;
+        }
+        doc.text(line, margin, y);
+        y += 18;
+      });
+      doc.save("para.pdf");
+    }
+
+    async function downloadDocx() {
+      const text = getVisibleOutputText();
+      if (!text || !window.docx) return;
+      const { Document, Packer, Paragraph, TextRun } = window.docx;
+      const paragraphs = text.split(/\n+/).map(line => new Paragraph({ children: [new TextRun(line)] }));
+      const doc = new Document({ sections: [{ children: paragraphs.length ? paragraphs : [new Paragraph("")] }] });
+      const blob = await Packer.toBlob(doc);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "para.docx";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    renderModeControls();
+    setActiveMode(currentMode);
+    syncStatusVisibility();
+    setParaphraseLabel(false);
+    updateInputCount();
+    renderHistory();
+    updateExportButtons();
+    installDragAndDrop();
+
+    input.addEventListener("input", updateInputCount);
+
+    // History modal functionality
+    const historyBtn = document.getElementById("historyBtn");
+    const historyModal = document.getElementById("historyModal");
+    const historyClose = document.getElementById("historyClose");
+
+    function openHistoryModal() {
+      historyModal.hidden = false;
+      renderHistory();
+    }
+
+    function closeHistoryModal() {
+      historyModal.hidden = true;
+    }
+
+    historyBtn.addEventListener("click", openHistoryModal);
+    historyClose.addEventListener("click", closeHistoryModal);
+    
+    historyModal.addEventListener("click", (e) => {
+      if (e.target === historyModal) closeHistoryModal();
+    });
+
+    toggleChanges.addEventListener("click", () => {
+      if (diffButtonBlocked || !currentDiff || isManualEdited) return;
+      diffViewEnabled = !diffViewEnabled;
+      applyOutputView();
+    });
+
+    if (toggleInputBtn && editor) {
+      toggleInputBtn.addEventListener("click", () => {
+        inputHidden = !inputHidden;
+        editor.classList.toggle("hide-input", inputHidden);
+        toggleInputBtn.textContent = inputHidden ? "Mostrar entrada" : "Ocultar entrada";
+      });
+    }
+
+    output.addEventListener("click", onSynWordClick);
+
+    function openOutputMenu() {
+      outputMenu.hidden = false;
+      outputMenuBtn.setAttribute("aria-expanded", "true");
+    }
+
+    function closeOutputMenu() {
+      outputMenu.hidden = true;
+      outputMenuBtn.setAttribute("aria-expanded", "false");
+    }
+
+    function openTranslateMenu() {
+      translateMenu.hidden = false;
+      // Highlight current language if translated
+      if (isTranslated && currentTranslation) {
+        translateMenu.querySelectorAll("button").forEach(btn => {
+          btn.classList.toggle("active", btn.dataset.lang === currentTranslation.lang);
+        });
+      }
+    }
+
+    function closeTranslateMenu() {
+      translateMenu.hidden = true;
+    }
+
+    function showTranslateBanner(langCode) {
+      const labels = { en: "Inglés", fr: "Francés", de: "Alemán", pt: "Portugués" };
+      translateBannerText.textContent = `Traducido a ${labels[langCode] || langCode}`;
+      translateBanner.hidden = false;
+    }
+
+    function hideTranslateBanner() {
+      translateBanner.hidden = true;
+    }
+
+    function restoreOriginalText() {
+      if (currentTranslation && currentTranslation.original) {
+        setOutputHtml(escapeHtml(currentTranslation.original));
+        isTranslated = false;
+        hideTranslateBanner();
+        outputCharCount.textContent = `${currentTranslation.original.length} caracteres`;
+      }
+    }
+
+    async function translateToLanguage(lang) {
+      const source = isTranslated && currentTranslation 
+        ? currentTranslation.original 
+        : getVisibleOutputText();
+      
+      if (!source) return;
+
+      // Store original if first translation
+      if (!currentTranslation) {
+        currentTranslation = { original: source };
+      }
+
+      closeTranslateMenu();
+      
+      // Show loading state
+      const loadingText = "Traduciendo...";
+      const previousText = output.textContent;
+      setOutputHtml(escapeHtml(loadingText));
+
+      try {
+        const r = await fetch("/api/translate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: source, target: lang })
+        });
+        const data = await r.json().catch(() => ({ translation: "" }));
+        const translated = (data.translation || "").trim();
+        
+        if (translated) {
+          currentTranslation.text = translated;
+          currentTranslation.lang = lang;
+          setOutputHtml(escapeHtml(translated));
+          isTranslated = true;
+          showTranslateBanner(lang);
+          outputCharCount.textContent = `${translated.length} caracteres`;
+        } else {
+          setOutputHtml(escapeHtml(previousText));
+          alert("No se pudo traducir. Intenta nuevamente.");
+        }
+      } catch {
+        setOutputHtml(escapeHtml(previousText));
+        alert("No se pudo traducir. Intenta nuevamente.");
+      }
+    }
+
+    outputMenuBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (outputMenu.hidden) openOutputMenu();
+      else closeOutputMenu();
+    });
+
+    outputMenu.addEventListener("click", (e) => e.stopPropagation());
+
+    translateBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (translateMenu.hidden) openTranslateMenu();
+      else closeTranslateMenu();
+    });
+
+    translateMenu.addEventListener("click", (e) => e.stopPropagation());
+
+    translateMenu.querySelectorAll("button[data-lang]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const lang = btn.dataset.lang;
+        translateToLanguage(lang);
+      });
+    });
+
+    translateBannerClose.addEventListener("click", () => {
+      restoreOriginalText();
+    });
+
+    document.addEventListener("click", (event) => {
+      if (synonymPopover) {
+        if (synonymPopover.contains(event.target)) return;
+        if (event.target.closest(".syn-word") === synonymAnchor) return;
+        closeSynonymPopover();
+      }
+      if (!outputMenu.hidden) closeOutputMenu();
+      if (!translateMenu.hidden) closeTranslateMenu();
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      closeSynonymPopover();
+      if (!outputMenu.hidden) closeOutputMenu();
+      if (!translateMenu.hidden) closeTranslateMenu();
+      if (!historyModal.hidden) closeHistoryModal();
+    });
+
+    menuDownloadPdf.addEventListener("click", () => {
+      closeOutputMenu();
+      downloadPdf();
+    });
+
+    menuDownloadDocx.addEventListener("click", () => {
+      closeOutputMenu();
+      downloadDocx().catch(() => {});
+    });
+
+    output.addEventListener("input", () => {
+      if (isProgrammaticUpdate || !currentResultText) return;
+
+      isManualEdited = true;
+      diffViewEnabled = false;
+      disableDiffButton("Editado manualmente");
+      outputCharCount.textContent = `${output.textContent.length} caracteres`;
+      similarityText.textContent = "";
+      
+      // Reset translation state on manual edit
+      currentTranslation = null;
+      isTranslated = false;
+      hideTranslateBanner();
+      
+      updateExportButtons();
+    });
+
+    btn.addEventListener("click", async () => {
+      const text = input.value.trim();
+      if (!text) return;
+
+      const STREAM_TIMEOUT_MS = 25000;
+      const controller = new AbortController();
+      let reader;
+      let timeoutId;
+      let streamTimedOut = false;
+
+      btn.disabled = true;
+      setParaphraseLabel(true);
+      outputCharCount.textContent = "";
+      similarityText.textContent = "";
+
+      disableDiffButton("");
+      isManualEdited = false;
+      hasReceivedFirstChunk = false;
+      currentOriginalText = text;
+      currentResultText = "";
+      currentDiff = null;
+      
+      // Reset translation state
+      currentTranslation = null;
+      isTranslated = false;
+      hideTranslateBanner();
+      
+      updateExportButtons();
+      showSkeleton();
+
+      try {
+        timeoutId = setTimeout(() => {
+          streamTimedOut = true;
+          controller.abort();
+          if (reader) {
+            reader.cancel("timeout").catch(() => {});
+          }
+        }, STREAM_TIMEOUT_MS);
+
+        const res = await fetch("/api/summary", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            text,
+            mode: currentMode
+          }),
+          signal: controller.signal
+        });
+
+        if (!res.ok || !res.body) {
+          if (res.status === 413) {
+            throw new Error("El texto es demasiado largo, intenta con un párrafo más corto.");
+          }
+          throw new Error("No se pudo generar el texto. Intenta nuevamente.");
+        }
+
+        reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+        let streamDone = false;
+
+        while (!streamDone) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split("\n\n");
+          buffer = events.pop() || "";
+
+          for (const eventBlock of events) {
+            const line = eventBlock
+              .split("\n")
+              .find(lineItem => lineItem.startsWith("data:"));
+
+            if (!line) continue;
+
+            const payloadText = line.replace(/^data:\s*/, "");
+            if (!payloadText || payloadText === "[DONE]") continue;
+
+            const payload = JSON.parse(payloadText);
+
+            if (payload.type === "chunk" && payload.text) {
+              currentResultText += payload.text;
+
+              if (!hasReceivedFirstChunk) {
+                hasReceivedFirstChunk = true;
+              }
+
+              setOutputHtml(escapeHtml(currentResultText));
+              outputCharCount.textContent = `${currentResultText.length} caracteres`;
+              updateExportButtons();
+            }
+
+            if (payload.type === "error") {
+              throw new Error(payload.message || "No se pudo generar el texto. Intenta nuevamente.");
+            }
+
+            if (payload.type === "done") {
+              streamDone = true;
+              break;
+            }
+          }
+        }
+
+        if (streamTimedOut) {
+          throw new Error("La generación tardó demasiado. Intenta nuevamente.");
+        }
+
+        if (!currentResultText.trim()) {
+          throw new Error("No se pudo generar el texto. Intenta nuevamente.");
+        }
+
+        currentDiff = buildDiffData(currentOriginalText, currentResultText);
+        diffViewEnabled = false;
+        applyOutputView();
+
+        if (currentDiff.diffDisabled) {
+          disableDiffButton("Cambios no disponibles por longitud del texto");
+        } else {
+          enableDiffButton("");
+        }
+
+        const similarity = currentDiff.totalCount
+          ? Math.round(100 - (currentDiff.addedCount / currentDiff.totalCount) * 100)
+          : 100;
+        similarityText.textContent = getSimilarityLabel(similarity);
+
+        saveHistoryEntry({
+          original: currentOriginalText,
+          result: currentResultText,
+          mode: currentMode,
+          timestamp: Date.now()
+        });
+      } catch (err) {
+        const isTooLongError = err?.message === "El texto es demasiado largo, intenta con un párrafo más corto.";
+        const isTimeoutError = streamTimedOut || err?.name === "AbortError";
+        const message = isTooLongError
+          ? err.message
+          : isTimeoutError
+            ? "La generación tardó demasiado. Reintenta en unos segundos."
+            : "No se pudo generar el texto. Intenta nuevamente.";
+
+        setOutputHtml(escapeHtml(message));
+        outputCharCount.textContent = "";
+        similarityText.textContent = "";
+      } finally {
+        clearTimeout(timeoutId);
+        if (reader) {
+          reader.cancel().catch(() => {});
+        }
+        btn.disabled = false;
+        setParaphraseLabel(false);
+        updateExportButtons();
+      }
+    });
+
+    copyBtn.addEventListener("click", async () => {
+      const text = output.textContent.trim();
+      if (!text) return;
+
+      try {
+        await navigator.clipboard.writeText(text);
+        copyBtn.textContent = "Copiado";
+        setTimeout(() => {
+          copyBtn.textContent = "Copiar";
+        }, 1200);
+      } catch {
+        copyBtn.textContent = "Error";
+        setTimeout(() => {
+          copyBtn.textContent = "Copiar";
+        }, 1200);
+      }
+    });
+
+    copyInputBtn.addEventListener("click", async () => {
+      const text = input.value;
+      if (!text) return;
+
+      try {
+        await navigator.clipboard.writeText(text);
+        copyInputBtn.textContent = "Copiado";
+        setTimeout(() => {
+          copyInputBtn.textContent = "Copiar";
+        }, 1200);
+      } catch {
+        copyInputBtn.textContent = "Error";
+        setTimeout(() => {
+          copyInputBtn.textContent = "Copiar";
+        }, 1200);
+      }
+    });
+
+    renderModeControls();
+    setActiveMode(currentMode);
+
+
+  </script>
+
+
+</body>
+</html>
