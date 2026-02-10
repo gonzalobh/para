@@ -1355,7 +1355,7 @@
             <div class="panel-status" aria-hidden="true"></div>
             <div class="input-panel">
               <textarea id="inputText" placeholder="Ingresa el texto que quieres parafrasear..."></textarea>
-              <div id="inputTextCorrectable" class="input-with-corrections" contenteditable="true" style="display: none;" data-placeholder="Escribe o pega tu texto aquí para revisar ortografía y gramática..."></div>
+              <textarea id="inputTextCorrectable" class="input-with-corrections" style="display: none; width: 100%; min-height: 300px; border: none; outline: none; resize: vertical; font-family: inherit; font-size: inherit; padding: 12px;" placeholder="Escribe o pega tu texto aquí para revisar ortografía y gramática..."></textarea>
               <button id="copyInput" class="copy-btn" type="button" aria-label="Copiar entrada">Copiar</button>
             </div>
             <div class="controls paraphrase-controls">
@@ -2720,6 +2720,11 @@
     
     // Obtener texto plano del div contenteditable
     function getPlainText(element) {
+      // Si es textarea, usar .value
+      if (element.tagName === 'TEXTAREA') {
+        return element.value || '';
+      }
+      // Si es div contenteditable, usar textContent
       return element.textContent || '';
     }
     
@@ -2923,10 +2928,8 @@
     async function checkCorrections() {
       const text = getPlainText(inputTextCorrectable);
       
-      // NO mostrar "Analizando texto..." - llamar directamente a la API
-      
-      // Llamar a la API para detectar errores
-      const detectedErrors = await detectErrorsAPI(text);
+      // Usar solo detección LOCAL (instantánea) - NO llamar a OpenAI
+      const detectedErrors = detectErrorsLocal(text);
       
       // Mantener los estados de ignored/accepted de errores previos
       detectedErrors.forEach(newError => {
@@ -2941,13 +2944,137 @@
       
       corrections = detectedErrors;
       renderCorrectionsList();
-      setTextWithErrors(text, corrections.filter(c => !c.ignored && !c.accepted));
+      // NO modificar el textarea - mantenerlo como texto plano editable
+      // setTextWithErrors(text, corrections.filter(c => !c.ignored && !c.accepted));
       
       // Actualizar contador de caracteres
       const inputCharCount = document.getElementById('inputCharCount');
       if (inputCharCount) {
         inputCharCount.textContent = `${text.length} caracteres`;
       }
+    }
+    
+    // Función de detección LOCAL (instantánea, sin API)
+    function detectErrorsLocal(text) {
+      if (!text) return [];
+      
+      const errors = [];
+      let match;
+      
+      // REGLA 1: Mayúscula después de coma
+      const upperAfterCommaRegex = /,\s+([A-ZÁÉÍÓÚÑ][a-záéíóúñ]+)/g;
+      while ((match = upperAfterCommaRegex.exec(text)) !== null) {
+        const word = match[1];
+        const properNouns = ['María', 'Juan', 'Pedro', 'Ana', 'Carlos', 'México', 'España', 'Argentina', 'Luis', 'José', 'Manuel'];
+        
+        if (!properNouns.includes(word)) {
+          const offset = match.index + match[0].indexOf(word);
+          errors.push({
+            id: correctionIdCounter++,
+            type: 'grammar',
+            errorText: word,
+            suggestion: word.charAt(0).toLowerCase() + word.slice(1),
+            start: offset,
+            end: offset + word.length,
+            message: 'Después de coma se usa minúscula (excepto nombres propios)',
+            allSuggestions: [word.charAt(0).toLowerCase() + word.slice(1)],
+            ignored: false,
+            accepted: false
+          });
+        }
+      }
+      
+      // REGLA 2: Palabras sin tilde (errores comunes)
+      const palabrasSinTilde = {
+        'quedo': 'quedó',
+        'tenia': 'tenía',
+        'decidi': 'decidí',
+        'llegue': 'llegué',
+        'mama': 'mamá',
+        'papa': 'papá',
+        'habia': 'había',
+        'bateria': 'batería',
+        'comio': 'comió',
+        'bebio': 'bebió',
+        'corrio': 'corrió',
+        'celu': 'celular',
+        'cel': 'celular'
+      };
+      
+      const wordRegex = /\b[a-záéíóúñü]+\b/gi;
+      while ((match = wordRegex.exec(text)) !== null) {
+        const word = match[0];
+        const wordLower = word.toLowerCase();
+        
+        if (palabrasSinTilde[wordLower]) {
+          errors.push({
+            id: correctionIdCounter++,
+            type: 'spelling',
+            errorText: word,
+            suggestion: palabrasSinTilde[wordLower],
+            start: match.index,
+            end: match.index + word.length,
+            message: 'Falta tilde',
+            allSuggestions: [palabrasSinTilde[wordLower]],
+            ignored: false,
+            accepted: false
+          });
+        }
+      }
+      
+      // REGLA 3: "a ver" vs "haber"
+      const haberRegex = /\bhaber\s+si\b/gi;
+      while ((match = haberRegex.exec(text)) !== null) {
+        errors.push({
+          id: correctionIdCounter++,
+          type: 'grammar',
+          errorText: match[0],
+          suggestion: match[0].replace(/haber/i, m => m[0] === 'H' ? 'A ver' : 'a ver'),
+          start: match.index,
+          end: match.index + match[0].length,
+          message: 'Confusión entre "a ver" y "haber". Usa "a ver" para verificar',
+          allSuggestions: [match[0].replace(/haber/i, m => m[0] === 'H' ? 'A ver' : 'a ver')],
+          ignored: false,
+          accepted: false
+        });
+      }
+      
+      // REGLA 4: "echo" vs "hecho"
+      const echoRegex = /\b(he|has|ha|hemos|habéis|han)\s+echo\b/gi;
+      while ((match = echoRegex.exec(text)) !== null) {
+        const wordStart = match.index + match[0].indexOf('echo');
+        errors.push({
+          id: correctionIdCounter++,
+          type: 'spelling',
+          errorText: 'echo',
+          suggestion: 'hecho',
+          start: wordStart,
+          end: wordStart + 4,
+          message: 'Confusión entre "echo" (de echar) y "hecho" (de hacer)',
+          allSuggestions: ['hecho'],
+          ignored: false,
+          accepted: false
+        });
+      }
+      
+      // REGLA 5: Espacios dobles
+      const doubleSpaceRegex = /\s{2,}/g;
+      while ((match = doubleSpaceRegex.exec(text)) !== null) {
+        errors.push({
+          id: correctionIdCounter++,
+          type: 'typography',
+          errorText: match[0],
+          suggestion: ' ',
+          start: match.index,
+          end: match.index + match[0].length,
+          message: 'Espacios duplicados',
+          allSuggestions: [' '],
+          ignored: false,
+          accepted: false
+        });
+      }
+      
+      return errors;
     }
     
     // Renderizar lista de correcciones
@@ -3345,8 +3472,12 @@
       const currentIndex = remainingErrors.findIndex(e => e.id === errorId);
       const nextError = remainingErrors[currentIndex]; // El siguiente ya que este se acaba de aceptar
       
-      // Actualizar texto
-      inputTextCorrectable.textContent = newText;
+      // Actualizar texto en el textarea
+      if (inputTextCorrectable.tagName === 'TEXTAREA') {
+        inputTextCorrectable.value = newText;
+      } else {
+        inputTextCorrectable.textContent = newText;
+      }
       
       // Re-chequear y luego abrir siguiente
       setTimeout(async () => {
