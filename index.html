@@ -3024,8 +3024,8 @@
         // Obtener contexto (oración completa con palabra tachada)
         const context = getErrorContext(error, currentText);
         
-        // Vista compacta (colapsada): solo palabra incorrecta → palabra correcta
-        const compactView = `${escapeHtml(error.errorText)} <span class="quillbot-correction-word">${escapeHtml(error.suggestion)}</span>`;
+        // Vista compacta con preview de contexto (como en la imagen deseado.png)
+        const compactView = getCompactPreview(error, currentText);
         
         return `
           <div class="quillbot-card" data-error-id="${error.id}">
@@ -3200,6 +3200,43 @@
       return `
         ${escapeHtml(before)}<span class="quillbot-error-word">${escapeHtml(errorWord)}</span> <span class="quillbot-correction-word">${escapeHtml(error.suggestion)}</span>${escapeHtml(after)}
       `;
+    }
+    
+    // Función para obtener preview compacto con contexto (para vista colapsada)
+    function getCompactPreview(error, fullText) {
+      // Definir cuántas palabras mostrar antes y después del error
+      const wordsBefore = 2;  // 2 palabras antes
+      const wordsAfter = 1;   // 1 palabra después
+      
+      const beforeError = fullText.substring(0, error.start);
+      const afterError = fullText.substring(error.end);
+      
+      // Extraer palabras antes del error
+      const wordsBeforeArray = beforeError.trim().split(/\s+/);
+      const contextBefore = wordsBeforeArray.slice(-wordsBefore).join(' ');
+      
+      // Extraer palabras después del error
+      const wordsAfterArray = afterError.trim().split(/\s+/);
+      const contextAfter = wordsAfterArray.slice(0, wordsAfter).join(' ');
+      
+      // Construir preview: "contexto_antes palabra_incorrecta palabra_correcta contexto_después"
+      let preview = '';
+      
+      if (contextBefore) {
+        preview += escapeHtml(contextBefore) + ' ';
+      }
+      
+      // Palabra incorrecta tachada
+      preview += `<span class="quillbot-error-word">${escapeHtml(error.errorText)}</span> `;
+      
+      // Palabra correcta en verde
+      preview += `<span class="quillbot-correction-word">${escapeHtml(error.suggestion)}</span>`;
+      
+      if (contextAfter) {
+        preview += ' ' + escapeHtml(contextAfter);
+      }
+      
+      return preview;
     }
     
     // Event listener para Accept all
