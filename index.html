@@ -2616,45 +2616,69 @@
     let activeErrorId = null;
     const inputTextCorrectable = document.getElementById('inputTextCorrectable');
     
-    // Detectar errores usando la API de LanguageTool
-    async function detectErrorsAPI(text) {
-      if (!text || text.trim().length === 0) return [];
-      
+    function debounce(fn, ms){
+      let t;
+      return (...args)=>{
+        clearTimeout(t);
+        t = setTimeout(()=>fn(...args), ms);
+      }
+    }
+
+    function normalizeCorrectionErrors(errors) {
+      return (errors || []).map(error => ({
+        id: correctionIdCounter++,
+        type: error.type || 'grammar',
+        errorText: error.errorText || '',
+        suggestion: error.suggestion || '',
+        start: Number.isInteger(error.start) ? error.start : 0,
+        end: Number.isInteger(error.end) ? error.end : 0,
+        message: error.message || 'Error detectado',
+        allSuggestions: error.allSuggestions || (error.suggestion ? [error.suggestion] : []),
+        ignored: false,
+        accepted: false
+      }));
+    }
+
+    function renderErrors(errors) {
+      const detectedErrors = normalizeCorrectionErrors(errors);
+
+      detectedErrors.forEach(newError => {
+        const existingError = corrections.find(
+          e => e.start === newError.start && e.end === newError.end && e.errorText === newError.errorText
+        );
+        if (existingError) {
+          newError.ignored = existingError.ignored;
+          newError.accepted = existingError.accepted;
+        }
+      });
+
+      corrections = detectedErrors;
+      renderCorrectionsList();
+    }
+
+    async function runCorrection() {
+      const sourceInput = inputTextCorrectable?.style.display !== 'none' ? inputTextCorrectable : input;
+      const text = sourceInput?.value || '';
+
+      console.log('[correction] runCorrection() ejecutándose');
+
       try {
         const response = await fetch('/api/correct', {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            text: text,
-            language: 'es'
-          })
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text, language: 'es' })
         });
 
         if (!response.ok) {
-          console.error('Error en la API de corrección:', response.status);
-          return [];
+          console.error('[correction] Error en /api/correct:', response.status);
+          return;
         }
 
         const data = await response.json();
-        
-        // Mapear los errores de la API al formato interno
-        return (data.errors || []).map(error => ({
-          id: correctionIdCounter++,
-          type: error.type || 'grammar',
-          errorText: error.errorText,
-          suggestion: error.suggestion,
-          start: error.start,
-          end: error.end,
-          message: error.message || 'Error detectado',
-          allSuggestions: error.allSuggestions || [error.suggestion],
-          ignored: false,
-          accepted: false
-        }));
+        console.log('Correction result:', data);
+        renderErrors(data.errors || []);
       } catch (error) {
-        console.error('Error al detectar errores:', error);
-        return [];
+        console.error('[correction] Error ejecutando runCorrection():', error);
       }
     }
     
@@ -2927,25 +2951,7 @@
     // Detectar y mostrar correcciones (ahora async)
     async function checkCorrections() {
       const text = getPlainText(inputTextCorrectable);
-      
-      // Usar solo detección LOCAL (instantánea) - NO llamar a OpenAI
-      const detectedErrors = detectErrorsLocal(text);
-      
-      // Mantener los estados de ignored/accepted de errores previos
-      detectedErrors.forEach(newError => {
-        const existingError = corrections.find(
-          e => e.start === newError.start && e.end === newError.end && e.errorText === newError.errorText
-        );
-        if (existingError) {
-          newError.ignored = existingError.ignored;
-          newError.accepted = existingError.accepted;
-        }
-      });
-      
-      corrections = detectedErrors;
-      renderCorrectionsList();
-      // NO modificar el textarea - mantenerlo como texto plano editable
-      // setTextWithErrors(text, corrections.filter(c => !c.ignored && !c.accepted));
+      await runCorrection();
       
       // Actualizar contador de caracteres
       const inputCharCount = document.getElementById('inputCharCount');
@@ -3546,14 +3552,20 @@
     }
     
     // Event listener para cambios en el texto editable
-    let correctionTimeout;
-    inputTextCorrectable.addEventListener('input', () => {
-      clearTimeout(correctionTimeout);
-      correctionTimeout = setTimeout(() => {
-        if (currentMode === 'correccion') {
-          checkCorrections();
-        }
-      }, 800);
+    document.addEventListener('DOMContentLoaded', () => {
+      const correctionHandler = debounce(() => {
+        runCorrection();
+      }, 600);
+
+      if (input) {
+        input.addEventListener('input', correctionHandler);
+        console.log('[correction] listener registrado para #inputText');
+      }
+
+      if (inputTextCorrectable) {
+        inputTextCorrectable.addEventListener('input', correctionHandler);
+        console.log('[correction] listener registrado para #inputTextCorrectable');
+      }
     });
     
     // Prevenir que se pegue HTML formateado
