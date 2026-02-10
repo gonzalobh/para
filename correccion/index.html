@@ -3,15 +3,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Corrector con sugerencias</title>
+  <title>Corrección simple</title>
   <style>
     body {
       font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
-      max-width: 1100px;
+      max-width: 900px;
       margin: 2rem auto;
       padding: 0 1rem;
       color: #111;
-      background: #fafafa;
     }
 
     h1 {
@@ -23,341 +22,65 @@
       margin-top: 0;
     }
 
-    .layout {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1rem;
-    }
-
-    @media (min-width: 920px) {
-      .layout {
-        grid-template-columns: 1.2fr .8fr;
-        align-items: start;
-      }
-    }
-
-    .panel {
-      background: #fff;
-      border: 1px solid #e8e8e8;
-      border-radius: 12px;
-      padding: 1rem;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, .04);
-    }
-
     textarea {
       width: 100%;
-      min-height: 250px;
+      min-height: 180px;
       box-sizing: border-box;
       margin: .5rem 0 1rem;
       font-size: 16px;
       line-height: 1.5;
       padding: .75rem;
-      border: 1px solid #ddd;
-      border-radius: 10px;
-      resize: vertical;
-      background: #fff;
-    }
-
-    .actions {
-      display: flex;
-      gap: .5rem;
-      flex-wrap: wrap;
     }
 
     button {
-      padding: .6rem .95rem;
+      padding: .65rem 1rem;
       border: 1px solid #ddd;
       border-radius: 8px;
       background: #111;
       color: white;
       cursor: pointer;
-      font-size: 14px;
-    }
-
-    button.secondary {
-      background: #fff;
-      color: #111;
     }
 
     button:disabled {
       opacity: .6;
       cursor: default;
     }
-
-    #estado {
-      font-size: 14px;
-      margin-top: .75rem;
-      color: #444;
-      min-height: 20px;
-    }
-
-    #resumen {
-      margin: .25rem 0 1rem;
-      font-size: 14px;
-      color: #444;
-    }
-
-    #listaSugerencias {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-      display: grid;
-      gap: .75rem;
-    }
-
-    .sugerencia {
-      border: 1px solid #e6e6e6;
-      border-radius: 10px;
-      padding: .75rem;
-      background: #fff;
-    }
-
-    .sugerencia-header {
-      display: flex;
-      justify-content: space-between;
-      gap: .5rem;
-      margin-bottom: .5rem;
-      align-items: center;
-    }
-
-    .badge {
-      display: inline-block;
-      font-size: 12px;
-      background: #eef4ff;
-      color: #1d4ed8;
-      border-radius: 999px;
-      padding: .1rem .5rem;
-      text-transform: lowercase;
-    }
-
-    .sugerencia p {
-      margin: .3rem 0;
-      color: #222;
-    }
-
-    .sugerencia code {
-      background: #f4f4f4;
-      border-radius: 6px;
-      padding: .1rem .35rem;
-      font-size: 90%;
-    }
-
-    .sugerencia-actions {
-      display: flex;
-      gap: .4rem;
-      margin-top: .6rem;
-      flex-wrap: wrap;
-    }
-
-    .empty {
-      border: 1px dashed #ddd;
-      border-radius: 10px;
-      padding: .9rem;
-      color: #666;
-      background: #fff;
-    }
   </style>
 </head>
 <body>
-  <h1>Corrector ortográfico y gramatical con sugerencias</h1>
-  <p>El texto no se corrige automáticamente. Revisa cada sugerencia y decide si aceptarla o ignorarla.</p>
+  <h1>Corrección ortográfica y de puntuación</h1>
+  <p>App mínima usando la misma conexión a OpenAI del parafraseador de la raíz (<code>/api/summary</code>).</p>
 
-  <div class="layout">
-    <section class="panel">
-      <label for="entrada">Texto original</label>
-      <textarea id="entrada" placeholder="Escribe aquí tu texto..."></textarea>
+  <label for="entrada">Texto original</label>
+  <textarea id="entrada" placeholder="Escribe aquí tu texto..."></textarea>
 
-      <div class="actions">
-        <button id="corregir">Detectar errores</button>
-        <button id="aceptarTodos" class="secondary" disabled>Aceptar todos</button>
-      </div>
+  <button id="corregir">Corregir</button>
 
-      <div id="estado" aria-live="polite"></div>
-    </section>
-
-    <aside class="panel">
-      <h2 style="margin-top:0; font-size: 1.1rem;">Sugerencias</h2>
-      <div id="resumen">Sin análisis todavía.</div>
-      <ul id="listaSugerencias"></ul>
-      <div id="sinSugerencias" class="empty">Aquí verás los errores detectados (spelling, accent, punctuation, capitalization, grammar).</div>
-    </aside>
-  </div>
+  <label for="salida">Texto corregido</label>
+  <textarea id="salida" readonly placeholder="Aquí aparecerá el texto corregido..."></textarea>
 
   <script>
     const entrada = document.getElementById('entrada');
-    const botonCorregir = document.getElementById('corregir');
-    const botonAceptarTodos = document.getElementById('aceptarTodos');
-    const estado = document.getElementById('estado');
-    const resumen = document.getElementById('resumen');
-    const listaSugerencias = document.getElementById('listaSugerencias');
-    const sinSugerencias = document.getElementById('sinSugerencias');
+    const salida = document.getElementById('salida');
+    const boton = document.getElementById('corregir');
 
-    let suggestions = [];
+    async function corregir() {
+      const text = entrada.value.trim();
+      if (!text) return;
 
-    function normalizeType(type) {
-      const valid = new Set(['spelling', 'accent', 'punctuation', 'capitalization', 'grammar']);
-      const safeType = String(type || '').toLowerCase();
-      if (valid.has(safeType)) return safeType;
-      return 'grammar';
-    }
-
-    function escapeHtml(text) {
-      return String(text)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-    }
-
-    function normalizeSuggestion(raw, index) {
-      const original = typeof raw.original === 'string'
-        ? raw.original
-        : (typeof raw.errorText === 'string' ? raw.errorText : '');
-      const replacement = typeof raw.suggestion === 'string' ? raw.suggestion : '';
-      const startIndex = Number.isInteger(raw.start_index)
-        ? raw.start_index
-        : (Number.isInteger(raw.start) ? raw.start : -1);
-      const endIndex = Number.isInteger(raw.end_index)
-        ? raw.end_index
-        : (Number.isInteger(raw.end) ? raw.end : -1);
-
-      return {
-        id: String(raw.id ?? index + 1),
-        type: normalizeType(raw.type),
-        original,
-        suggestion: replacement,
-        start_index: startIndex,
-        end_index: endIndex,
-        ignored: false,
-        accepted: false
-      };
-    }
-
-    function hasActionableSuggestions() {
-      return suggestions.some((s) => !s.ignored && !s.accepted);
-    }
-
-    function setIdleState(message) {
-      resumen.textContent = message;
-      sinSugerencias.style.display = suggestions.length ? 'none' : 'block';
-      botonAceptarTodos.disabled = !hasActionableSuggestions();
-    }
-
-    function applySuggestionById(id) {
-      const suggestion = suggestions.find((item) => item.id === id);
-      if (!suggestion || suggestion.accepted || suggestion.ignored) return;
-
-      const text = entrada.value;
-      const start = suggestion.start_index;
-      const end = suggestion.end_index;
-
-      if (
-        !Number.isInteger(start) ||
-        !Number.isInteger(end) ||
-        start < 0 ||
-        end <= start ||
-        end > text.length
-      ) {
-        estado.textContent = `No se pudo aplicar la sugerencia ${id} (índices inválidos).`;
-        return;
-      }
-
-      const selected = text.slice(start, end);
-      if (selected !== suggestion.original) {
-        estado.textContent = `No se aplicó la sugerencia ${id} porque el texto cambió.`;
-        return;
-      }
-
-      entrada.value = text.slice(0, start) + suggestion.suggestion + text.slice(end);
-      const offset = suggestion.suggestion.length - (end - start);
-
-      suggestion.accepted = true;
-
-      suggestions.forEach((item) => {
-        if (item.id === suggestion.id || item.accepted || item.ignored) return;
-        if (item.start_index >= end) {
-          item.start_index += offset;
-          item.end_index += offset;
-        }
-      });
-
-      estado.textContent = `Sugerencia ${id} aplicada.`;
-      renderSuggestions();
-    }
-
-    function ignoreSuggestionById(id) {
-      const suggestion = suggestions.find((item) => item.id === id);
-      if (!suggestion || suggestion.accepted || suggestion.ignored) return;
-      suggestion.ignored = true;
-      estado.textContent = `Sugerencia ${id} ignorada.`;
-      renderSuggestions();
-    }
-
-    function renderSuggestions() {
-      listaSugerencias.innerHTML = '';
-
-      const actionable = suggestions.filter((s) => !s.accepted && !s.ignored);
-      const acceptedCount = suggestions.filter((s) => s.accepted).length;
-
-      if (!suggestions.length) {
-        setIdleState('Sin análisis todavía.');
-        return;
-      }
-
-      if (!actionable.length) {
-        setIdleState(`No quedan sugerencias pendientes. Aceptadas: ${acceptedCount}.`);
-        return;
-      }
-
-      setIdleState(`Sugerencias pendientes: ${actionable.length}. Aceptadas: ${acceptedCount}.`);
-
-      actionable.forEach((item) => {
-        const li = document.createElement('li');
-        li.className = 'sugerencia';
-
-        li.innerHTML = `
-          <div class="sugerencia-header">
-            <strong>Sugerencia #${escapeHtml(item.id)}</strong>
-            <span class="badge">${escapeHtml(item.type)}</span>
-          </div>
-          <p>Original: <code>${escapeHtml(item.original)}</code></p>
-          <p>Sugerido: <code>${escapeHtml(item.suggestion)}</code></p>
-          <div class="sugerencia-actions">
-            <button type="button" data-action="accept" data-id="${escapeHtml(item.id)}">Aceptar</button>
-            <button type="button" class="secondary" data-action="ignore" data-id="${escapeHtml(item.id)}">Ignorar</button>
-          </div>
-        `;
-
-        listaSugerencias.appendChild(li);
-      });
-
-      sinSugerencias.style.display = actionable.length ? 'none' : 'block';
-    }
-
-    async function detectarErrores() {
-      const text = entrada.value;
-      if (!text.trim()) {
-        estado.textContent = 'Ingresa un texto para analizar.';
-        return;
-      }
-
-      botonCorregir.disabled = true;
-      botonAceptarTodos.disabled = true;
-      botonCorregir.textContent = 'Analizando...';
-      estado.textContent = 'Consultando el corrector...';
-      suggestions = [];
-      renderSuggestions();
+      boton.disabled = true;
+      boton.textContent = 'Corrigiendo...';
+      salida.value = '';
 
       try {
-        const res = await fetch('/api/correct', {
+        const res = await fetch('/api/summary', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text })
+          body: JSON.stringify({ text, mode: 'correccion' })
         });
 
         if (!res.ok || !res.body) {
-          estado.textContent = 'No se pudo analizar el texto.';
+          salida.value = 'No se pudo corregir el texto.';
           return;
         }
 
@@ -379,22 +102,11 @@
 
             try {
               const payload = JSON.parse(line.slice(6));
-
-              if (payload.type === 'status' || payload.type === 'progress') {
-                estado.textContent = payload.message || 'Analizando...';
+              if (payload.type === 'chunk' && payload.text) {
+                salida.value += payload.text;
               }
-
-              if (payload.type === 'result') {
-                const serverErrors = Array.isArray(payload.suggestions)
-                  ? payload.suggestions
-                  : (Array.isArray(payload.errors) ? payload.errors : []);
-
-                suggestions = serverErrors
-                  .map((item, index) => normalizeSuggestion(item, index))
-                  .filter((item) => item.original && item.suggestion && item.start_index >= 0 && item.end_index > item.start_index);
-
-                estado.textContent = 'Análisis completado.';
-                renderSuggestions();
+              if (payload.type === 'error') {
+                salida.value = payload.message || 'Error al corregir.';
               }
             } catch {
               // ignorar evento inválido
@@ -402,40 +114,14 @@
           }
         }
       } catch {
-        estado.textContent = 'Error de conexión.';
+        salida.value = 'Error de conexión.';
       } finally {
-        botonCorregir.disabled = false;
-        botonCorregir.textContent = 'Detectar errores';
-        botonAceptarTodos.disabled = !hasActionableSuggestions();
+        boton.disabled = false;
+        boton.textContent = 'Corregir';
       }
     }
 
-    listaSugerencias.addEventListener('click', (event) => {
-      const target = event.target;
-      if (!(target instanceof HTMLElement)) return;
-
-      const action = target.dataset.action;
-      const id = target.dataset.id;
-      if (!action || !id) return;
-
-      if (action === 'accept') applySuggestionById(id);
-      if (action === 'ignore') ignoreSuggestionById(id);
-    });
-
-    botonAceptarTodos.addEventListener('click', () => {
-      const pending = suggestions
-        .filter((item) => !item.accepted && !item.ignored)
-        .sort((a, b) => a.start_index - b.start_index);
-
-      pending.forEach((item) => applySuggestionById(item.id));
-
-      if (!pending.length) {
-        estado.textContent = 'No hay sugerencias pendientes para aplicar.';
-      }
-    });
-
-    botonCorregir.addEventListener('click', detectarErrores);
-    renderSuggestions();
+    boton.addEventListener('click', corregir);
   </script>
 </body>
 </html>
