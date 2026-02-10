@@ -2916,16 +2916,7 @@
     async function checkCorrections() {
       const text = getPlainText(inputTextCorrectable);
       
-      // Mostrar indicador de carga
-      const correctionList = document.getElementById('correctionList');
-      if (correctionList) {
-        correctionList.innerHTML = `
-          <div class="no-corrections">
-            <div class="no-corrections-icon">⏳</div>
-            <div><strong>Analizando texto...</strong></div>
-          </div>
-        `;
-      }
+      // NO mostrar "Analizando texto..." - llamar directamente a la API
       
       // Llamar a la API para detectar errores
       const detectedErrors = await detectErrorsAPI(text);
@@ -2962,6 +2953,16 @@
       const activeCorrections = corrections.filter(c => !c.ignored && !c.accepted);
       correctionCount.textContent = activeCorrections.length;
       
+      // Si no hay texto en el input, no mostrar nada
+      const currentText = getPlainText(inputTextCorrectable);
+      if (!currentText || currentText.trim().length === 0) {
+        correctionList.innerHTML = '';
+        correctionCount.textContent = '0';
+        correctionCount.style.display = 'none';
+        return;
+      }
+      
+      // Si hay texto pero no errores
       if (activeCorrections.length === 0) {
         correctionList.innerHTML = `
           <div class="no-corrections">
@@ -2969,8 +2970,12 @@
             <div><strong>No se encontraron errores</strong></div>
           </div>
         `;
+        correctionCount.style.display = 'inline-block';
         return;
       }
+      
+      // Si hay errores
+      correctionCount.style.display = 'inline-block';
       
       correctionList.innerHTML = activeCorrections.map(error => {
         // Determinar el label del tipo de error
@@ -3020,7 +3025,7 @@
                 ${suggestionsHTML}
                 <div class="correction-actions">
                   <button class="correction-btn" data-action="ignore">
-                    Ignorar en este texto
+                    Ignorar
                   </button>
                 </div>
               </div>
