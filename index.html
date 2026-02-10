@@ -1168,6 +1168,12 @@
       align-items: center;
       gap: 8px;
       margin-bottom: 12px;
+      cursor: pointer;  /* Clickeable */
+    }
+    
+    /* Reducir margin cuando está colapsada */
+    .quillbot-card:not(.expanded) .quillbot-card-header {
+      margin-bottom: 8px;
     }
     
     .quillbot-error-icon {
@@ -1203,8 +1209,17 @@
       border-color: #5f6368;
     }
     
+    /* Vista compacta (colapsada) */
+    .quillbot-compact-view {
+      font-size: 14px;
+      color: #202124;
+      line-height: 1.5;
+      padding-left: 20px;  /* Alineado con el título */
+    }
+    
     .quillbot-card-body {
       margin-bottom: 12px;
+      padding-left: 20px;  /* Alineado con el título */
     }
     
     .quillbot-context {
@@ -2948,7 +2963,7 @@
         return;
       }
       
-      // ESTILO QUILLBOT: Tarjetas siempre expandidas
+      // ESTILO QUILLBOT: Tarjetas colapsadas por defecto, expandibles al click
       correctionList.innerHTML = activeCorrections.map(error => {
         // Determinar el título del error estilo QuillBot
         let errorTitle = 'Agrega una tilde';
@@ -2956,6 +2971,8 @@
         
         if (msg.includes('subjuntivo')) {
           errorTitle = 'Corrige el uso del subjuntivo';
+        } else if (msg.includes('tiempo verbal')) {
+          errorTitle = 'Corrige el tiempo verbal';
         } else if (msg.includes('acentuación') || msg.includes('acentuacion')) {
           errorTitle = 'Corrige la acentuación';
         } else if (msg.includes('tilde')) {
@@ -2966,6 +2983,10 @@
           errorTitle = 'Corrige la puntuación';
         } else if (msg.includes('concordancia')) {
           errorTitle = 'Corrige la concordancia';
+        } else if (msg.includes('confusión') || msg.includes('confusion')) {
+          errorTitle = 'Confusión entre palabras';
+        } else if (msg.includes('uso del')) {
+          errorTitle = 'Corrige el uso del que';
         } else if (error.type === 'spelling') {
           errorTitle = 'Corrige la ortografía';
         } else {
@@ -2976,21 +2997,31 @@
         // Obtener contexto (oración completa con palabra tachada)
         const context = getErrorContext(error, currentText);
         
+        // Vista compacta (colapsada): solo palabra incorrecta → palabra correcta
+        const compactView = `${escapeHtml(error.errorText)} <span class="quillbot-correction-word">${escapeHtml(error.suggestion)}</span>`;
+        
         return `
           <div class="quillbot-card" data-error-id="${error.id}">
-            <div class="quillbot-card-header">
+            <div class="quillbot-card-header" data-action="toggle">
               <span class="quillbot-error-icon">●</span>
               <span class="quillbot-error-title">${escapeHtml(errorTitle)}</span>
               <button class="quillbot-help-btn" title="Más información">?</button>
             </div>
             
-            <div class="quillbot-card-body">
+            <!-- Vista compacta (visible por defecto) -->
+            <div class="quillbot-compact-view">
+              ${compactView}
+            </div>
+            
+            <!-- Vista expandida (oculta por defecto) -->
+            <div class="quillbot-card-body" style="display: none;">
               <div class="quillbot-context">
                 ${context}
               </div>
             </div>
             
-            <div class="quillbot-card-actions">
+            <!-- Botones (ocultos por defecto) -->
+            <div class="quillbot-card-actions" style="display: none;">
               <button class="quillbot-btn quillbot-btn-accept" data-action="accept">
                 <span class="quillbot-btn-icon">✓</span> Accept
               </button>
@@ -3005,6 +3036,37 @@
       // Agregar event listeners
       correctionList.querySelectorAll('.quillbot-card').forEach(card => {
         const errorId = parseInt(card.dataset.errorId);
+        
+        // Toggle para expandir/colapsar
+        const header = card.querySelector('[data-action="toggle"]');
+        if (header) {
+          header.addEventListener('click', (e) => {
+            // No hacer nada si se clickea el botón "?"
+            if (e.target.classList.contains('quillbot-help-btn')) {
+              return;
+            }
+            
+            // Toggle expanded class
+            card.classList.toggle('expanded');
+            
+            // Mostrar/ocultar elementos
+            const compactView = card.querySelector('.quillbot-compact-view');
+            const cardBody = card.querySelector('.quillbot-card-body');
+            const cardActions = card.querySelector('.quillbot-card-actions');
+            
+            if (card.classList.contains('expanded')) {
+              // Expandir
+              if (compactView) compactView.style.display = 'none';
+              if (cardBody) cardBody.style.display = 'block';
+              if (cardActions) cardActions.style.display = 'flex';
+            } else {
+              // Colapsar
+              if (compactView) compactView.style.display = 'block';
+              if (cardBody) cardBody.style.display = 'none';
+              if (cardActions) cardActions.style.display = 'none';
+            }
+          });
+        }
         
         const acceptBtn = card.querySelector('[data-action="accept"]');
         if (acceptBtn) {
