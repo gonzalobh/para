@@ -1,4 +1,4 @@
-const SYSTEM_PROMPT = `Detecta errores de ortografía y gramática.
+const SYSTEM_PROMPT = `Detecta errores ortográficos y gramaticales.
 Responde SOLO JSON:
 {"errors":[{"errorText":"","suggestion":"","start":0,"end":1,"type":"spelling"}]}
 
@@ -77,7 +77,7 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "gpt-4.1-mini",
         temperature: 0,
-        max_output_tokens: 300,
+        max_output_tokens: 200,
         stream: true,
         instructions: SYSTEM_PROMPT,
         input: safeText
