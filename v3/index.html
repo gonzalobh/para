@@ -1,320 +1,375 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>para v3 — Corrector</title>
+  <title>Corrector mínimo</title>
   <style>
-    :root { color-scheme: light; }
+    :root {
+      --bg: #fff;
+      --fg: #111;
+      --line: #d0d0d0;
+      --line-strong: #b8b8b8;
+      --panel: #f7f7f7;
+      --muted: #666;
+    }
+
     * { box-sizing: border-box; }
-    body {
+
+    html, body {
+      height: 100%;
       margin: 0;
-      font-family: Inter, system-ui, -apple-system, sans-serif;
-      background: #f6f7f9;
-      color: #111;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Arial, sans-serif;
+      font-size: 16px;
+      line-height: 1.5;
     }
+
     .app {
-      max-width: 1180px;
-      margin: 0 auto;
-      min-height: 100vh;
-      padding: 24px;
-      display: grid;
-      gap: 14px;
-    }
-    .card {
-      background: #fff;
-      border: 1px solid #e8eaed;
-      border-radius: 16px;
-      box-shadow: 0 4px 16px rgba(0,0,0,.04);
-    }
-    .header {
-      padding: 16px 20px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-    h1 { margin: 0; font-size: 22px; }
-    .sub { margin: 4px 0 0; color: #5f6368; font-size: 13px; }
-    .main {
+      height: 100vh;
       display: grid;
       grid-template-columns: 1fr 360px;
-      gap: 14px;
     }
-    .editor { padding: 14px; display: grid; gap: 10px; }
+
+    .editor-pane {
+      border-right: 1px solid var(--line);
+      min-width: 0;
+    }
+
+    .editor-wrap {
+      position: relative;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    .highlights,
     textarea {
+      position: absolute;
+      inset: 0;
+      margin: 0;
+      padding: 20px 24px;
+      border: 0;
+      resize: none;
       width: 100%;
-      min-height: min(72vh, 760px);
-      resize: vertical;
-      border: 1px solid #dfe3e8;
-      border-radius: 12px;
-      padding: 14px;
-      font-size: 16px;
-      line-height: 1.6;
-      font-family: inherit;
+      height: 100%;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow-wrap: anywhere;
+      line-height: 1.5;
+      font: inherit;
+      letter-spacing: inherit;
+      tab-size: 2;
+    }
+
+    .highlights {
+      pointer-events: none;
+      color: transparent;
+      background: var(--bg);
+    }
+
+    .mark {
+      color: transparent;
+      text-decoration-line: underline;
+      text-decoration-color: var(--line-strong);
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+      text-decoration-skip-ink: none;
+    }
+
+    textarea {
+      color: var(--fg);
+      background: transparent;
+      caret-color: var(--fg);
       outline: none;
     }
-    textarea:focus { border-color: #0b57d0; box-shadow: 0 0 0 4px rgba(11,87,208,.08); }
-    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
-    button {
-      border: 1px solid #dadce0;
-      background: #fff;
-      color: #111;
-      border-radius: 999px;
-      padding: 8px 13px;
-      cursor: pointer;
-      font-size: 13px;
-    }
-    button.primary { background: #111; color: #fff; border-color: #111; }
-    button:disabled { opacity: .5; cursor: not-allowed; }
-    .status { font-size: 12px; color: #5f6368; min-height: 18px; }
 
-    .panel { display: grid; grid-template-rows: auto auto 1fr; min-height: 0; }
-    .panel-head { padding: 14px; border-bottom: 1px solid #f0f0f0; }
-    .panel-title { margin: 0; font-size: 14px; color: #202124; }
-    .count { font-size: 24px; font-weight: 700; margin-top: 2px; }
-    .list { padding: 10px; overflow: auto; max-height: calc(100vh - 180px); display: grid; gap: 8px; }
-    .item {
-      border: 1px solid #eceff1;
-      border-radius: 10px;
-      padding: 10px;
+    textarea::selection,
+    .highlights::selection {
+      background: #e9e9e9;
+    }
+
+    .side {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      background: #fcfcfc;
+    }
+
+    .side-head {
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+    }
+
+    .cards {
+      flex: 1;
+      overflow: auto;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      background: var(--bg);
+      padding: 12px;
       display: grid;
       gap: 8px;
-      background: #fff;
     }
-    .bad { color: #d93025; text-decoration: line-through; }
-    .good { color: #188038; font-weight: 600; }
-    .item-actions { display: flex; gap: 6px; }
-    .empty { color: #5f6368; font-size: 13px; padding: 8px; }
 
-    @media (max-width: 960px) {
-      .main { grid-template-columns: 1fr; }
-      .list { max-height: 320px; }
-      textarea { min-height: 48vh; }
+    .row {
+      display: grid;
+      gap: 3px;
+    }
+
+    .label {
+      font-size: 12px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .value {
+      font-size: 15px;
+      overflow-wrap: anywhere;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--fg);
+      font: inherit;
+      font-size: 13px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+
+    button:hover { border-color: #9f9f9f; }
+    button:active { background: #ececec; }
+
+    .empty {
+      padding: 16px;
+      border: 1px dashed var(--line);
+      color: var(--muted);
+      font-size: 14px;
+      background: #fafafa;
+    }
+
+    @media (max-width: 940px) {
+      .app { grid-template-columns: 1fr; }
+      .editor-pane { border-right: 0; border-bottom: 1px solid var(--line); height: 62vh; }
+      .side { height: 38vh; }
     }
   </style>
 </head>
 <body>
-  <div class="app">
-    <section class="card header">
-      <div>
-        <h1>Corrector</h1>
-        <p class="sub">Modo único de corrección ortográfica y gramatical.</p>
+  <main class="app">
+    <section class="editor-pane">
+      <div class="editor-wrap">
+        <pre class="highlights" id="highlights" aria-hidden="true"></pre>
+        <textarea id="editor" spellcheck="false" placeholder="Escribe o pega texto aquí..."></textarea>
       </div>
     </section>
 
-    <section class="main">
-      <article class="card editor">
-        <div class="toolbar">
-          <button id="checkNow" class="primary" type="button">Revisar ahora</button>
-          <button id="applyAll" type="button" disabled>Aceptar todas</button>
-        </div>
-        <div id="status" class="status">Escribe para iniciar la corrección automática.</div>
-        <textarea id="inputText" placeholder="Pega o escribe texto aquí..."></textarea>
-      </article>
-
-      <aside class="card panel">
-        <div class="panel-head">
-          <p class="panel-title">Sugerencias</p>
-          <div id="errorCount" class="count">0</div>
-        </div>
-        <div class="toolbar" style="padding: 10px 14px;">
-          <button id="clearErrors" type="button">Limpiar lista</button>
-        </div>
-        <div id="errorList" class="list">
-          <p class="empty">Sin errores detectados.</p>
-        </div>
-      </aside>
-    </section>
-  </div>
+    <aside class="side">
+      <div class="side-head">Sugerencias</div>
+      <div class="cards" id="cards"></div>
+    </aside>
+  </main>
 
   <script>
-    const inputText = document.getElementById('inputText');
-    const checkNowBtn = document.getElementById('checkNow');
-    const applyAllBtn = document.getElementById('applyAll');
-    const clearErrorsBtn = document.getElementById('clearErrors');
-    const statusEl = document.getElementById('status');
-    const errorCountEl = document.getElementById('errorCount');
-    const errorListEl = document.getElementById('errorList');
+    const editor = document.getElementById('editor');
+    const highlights = document.getElementById('highlights');
+    const cards = document.getElementById('cards');
 
-    let errors = [];
-    let debounceId = null;
-    let activeController = null;
-    let requestNonce = 0;
+    let stateText = '';
+    let activeErrors = [];
+    let dismissed = new Set();
 
-    function setStatus(text) { statusEl.textContent = text; }
+    const debounce = (fn, delay = 120) => {
+      let t = 0;
+      return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...args), delay);
+      };
+    };
 
-    function renderErrors() {
-      errorCountEl.textContent = String(errors.length);
-      applyAllBtn.disabled = errors.length === 0;
+    const escapeHtml = (s) => s
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
 
+    const stableId = (e) => `${e.type}|${e.from}|${e.to}|${e.original}|${e.suggestion}`;
+
+    function mockDetectErrors(text) {
+      const out = [];
+
+      const words = [
+        ['qeu', 'que', 'ortografía'],
+        ['tambine', 'también', 'ortografía'],
+        ['definitavamente', 'definitivamente', 'ortografía'],
+        ['mas ', 'más ', 'ortografía'],
+        ['solo ', 'sólo ', 'ortografía']
+      ];
+
+      for (const [bad, good, type] of words) {
+        const re = new RegExp(bad.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+        let m;
+        while ((m = re.exec(text)) !== null) {
+          out.push({
+            id: `${bad}-${m.index}`,
+            from: m.index,
+            to: m.index + bad.length,
+            original: m[0],
+            suggestion: m[0].replace(new RegExp(bad, 'i'), good),
+            type
+          });
+        }
+      }
+
+      const punctuation = /([\wáéíóúüñ])\s+([,.;:!?])/gi;
+      let p;
+      while ((p = punctuation.exec(text)) !== null) {
+        const from = p.index + p[1].length;
+        const to = from + (p[0].length - p[1].length - 1);
+        out.push({
+          id: `punct-space-${from}`,
+          from,
+          to,
+          original: text.slice(from, to),
+          suggestion: '',
+          type: 'puntuación'
+        });
+      }
+
+      return out
+        .filter(e => e.from >= 0 && e.to > e.from && e.to <= text.length)
+        .sort((a, b) => a.from - b.from || a.to - b.to)
+        .reduce((acc, e) => {
+          const last = acc[acc.length - 1];
+          if (!last || e.from >= last.to) acc.push(e);
+          return acc;
+        }, []);
+    }
+
+    function renderHighlights(text, errors) {
       if (!errors.length) {
-        errorListEl.innerHTML = '<p class="empty">Sin errores detectados.</p>';
+        highlights.innerHTML = `${escapeHtml(text)}\n`;
         return;
       }
+      let html = '';
+      let cursor = 0;
+      for (const e of errors) {
+        html += escapeHtml(text.slice(cursor, e.from));
+        html += `<span class="mark">${escapeHtml(text.slice(e.from, e.to))}</span>`;
+        cursor = e.to;
+      }
+      html += escapeHtml(text.slice(cursor));
+      highlights.innerHTML = `${html}\n`;
+    }
 
-      errorListEl.innerHTML = errors.map((error, idx) => {
-        const bad = escapeHtml(error.errorText || '');
-        const good = escapeHtml(error.suggestion || '');
-        return `
-          <article class="item" data-index="${idx}">
-            <div><span class="bad">${bad}</span> → <span class="good">${good || '(sin sugerencia)'}</span></div>
-            <div class="item-actions">
-              <button type="button" data-action="apply" data-index="${idx}" ${good ? '' : 'disabled'}>Aplicar</button>
-              <button type="button" data-action="ignore" data-index="${idx}">Ignorar</button>
-            </div>
-          </article>
+    function renderCards(errors) {
+      if (!errors.length) {
+        cards.innerHTML = '<div class="empty">Sin sugerencias activas.</div>';
+        return;
+      }
+      const frag = document.createDocumentFragment();
+      for (const e of errors) {
+        const card = document.createElement('article');
+        card.className = 'card';
+        card.innerHTML = `
+          <div class="row"><span class="label">Fragmento</span><span class="value">${escapeHtml(e.original) || '∅'}</span></div>
+          <div class="row"><span class="label">Sugerencia</span><span class="value">${escapeHtml(e.suggestion) || 'Eliminar'}</span></div>
+          <div class="row"><span class="label">Tipo</span><span class="value">${escapeHtml(e.type)}</span></div>
+          <div class="actions">
+            <button data-action="accept" data-id="${e.id}">Aceptar</button>
+            <button data-action="reject" data-id="${e.id}">Rechazar</button>
+          </div>
         `;
-      }).join('');
-    }
-
-    function escapeHtml(str) {
-      return str
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#39;');
-    }
-
-    function normalizeErrors(raw) {
-      if (!Array.isArray(raw)) return [];
-      return raw
-        .filter(e => Number.isInteger(e.start) && Number.isInteger(e.end) && e.end > e.start)
-        .sort((a, b) => a.start - b.start);
-    }
-
-    function applySingleError(error) {
-      if (!error || !error.suggestion) return;
-      const current = inputText.value;
-      if (error.start < 0 || error.end > current.length || error.end <= error.start) return;
-      inputText.value = current.slice(0, error.start) + error.suggestion + current.slice(error.end);
-    }
-
-    function applyAllErrors() {
-      if (!errors.length) return;
-      let next = inputText.value;
-      [...errors]
-        .filter(e => e.suggestion)
-        .sort((a, b) => b.start - a.start)
-        .forEach((error) => {
-          if (error.start < 0 || error.end > next.length || error.end <= error.start) return;
-          next = next.slice(0, error.start) + error.suggestion + next.slice(error.end);
-        });
-      inputText.value = next;
-      errors = [];
-      renderErrors();
-      scheduleCorrection(120);
-    }
-
-    async function requestCorrection(text) {
-      if (activeController) activeController.abort();
-      activeController = new AbortController();
-      const nonce = ++requestNonce;
-
-      setStatus('Analizando texto...');
-      checkNowBtn.disabled = true;
-
-      try {
-        const response = await fetch('/api/correct', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text }),
-          signal: activeController.signal
-        });
-
-        if (!response.ok) throw new Error('No se pudo analizar');
-
-        const contentType = response.headers.get('content-type') || '';
-
-        if (contentType.includes('text/event-stream') && response.body) {
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-          let buffer = '';
-
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            buffer += decoder.decode(value, { stream: true });
-
-            const events = buffer.split('\n\n');
-            buffer = events.pop() || '';
-
-            for (const event of events) {
-              const dataLine = event.split('\n').find(line => line.startsWith('data: '));
-              if (!dataLine) continue;
-
-              const payload = JSON.parse(dataLine.slice(6));
-              if (payload.type === 'result') {
-                if (nonce !== requestNonce) return;
-                errors = normalizeErrors(payload.errors);
-                renderErrors();
-                setStatus(errors.length ? `Se detectaron ${errors.length} posibles correcciones.` : 'Sin errores detectados.');
-              }
-            }
-          }
-        } else {
-          const data = await response.json();
-          if (nonce !== requestNonce) return;
-          errors = normalizeErrors(data.errors || []);
-          renderErrors();
-          setStatus(errors.length ? `Se detectaron ${errors.length} posibles correcciones.` : 'Sin errores detectados.');
-        }
-      } catch (error) {
-        if (error.name === 'AbortError') return;
-        setStatus('Error al analizar. Intenta nuevamente.');
-      } finally {
-        if (nonce === requestNonce) {
-          checkNowBtn.disabled = false;
-        }
+        frag.appendChild(card);
       }
+      cards.innerHTML = '';
+      cards.appendChild(frag);
     }
 
-    function scheduleCorrection(delay = 420) {
-      clearTimeout(debounceId);
-      const text = inputText.value.trim();
-      if (!text) {
-        errors = [];
-        renderErrors();
-        setStatus('Escribe para iniciar la corrección automática.');
-        return;
-      }
-      debounceId = setTimeout(() => requestCorrection(text), delay);
+    const analyze = debounce(() => {
+      const text = editor.value;
+      const changed = text !== stateText;
+      stateText = text;
+      if (changed) dismissed = new Set();
+
+      const all = mockDetectErrors(text).map(e => ({ ...e, id: stableId(e) }));
+      activeErrors = all.filter(e => !dismissed.has(e.id));
+      renderHighlights(text, activeErrors);
+      renderCards(activeErrors);
+    }, 120);
+
+    function applyCorrection(id) {
+      const target = activeErrors.find(e => e.id === id);
+      if (!target) return;
+
+      const before = editor.value;
+      const selStart = editor.selectionStart;
+      const selEnd = editor.selectionEnd;
+      const next = before.slice(0, target.from) + target.suggestion + before.slice(target.to);
+      const delta = target.suggestion.length - (target.to - target.from);
+
+      let newStart = selStart;
+      let newEnd = selEnd;
+
+      if (selStart > target.to) newStart += delta;
+      else if (selStart > target.from) newStart = target.from + target.suggestion.length;
+
+      if (selEnd > target.to) newEnd += delta;
+      else if (selEnd > target.from) newEnd = target.from + target.suggestion.length;
+
+      stateText = next;
+      editor.value = next;
+      editor.setSelectionRange(newStart, newEnd);
+      dismissed = new Set();
+      const all = mockDetectErrors(next).map(e => ({ ...e, id: stableId(e) }));
+      activeErrors = all;
+      renderHighlights(next, activeErrors);
+      renderCards(activeErrors);
     }
 
-    inputText.addEventListener('input', () => scheduleCorrection());
+    function rejectCorrection(id) {
+      dismissed.add(id);
+      activeErrors = activeErrors.filter(e => e.id !== id);
+      renderHighlights(editor.value, activeErrors);
+      renderCards(activeErrors);
+    }
 
-    checkNowBtn.addEventListener('click', () => {
-      const text = inputText.value.trim();
-      if (!text) return;
-      requestCorrection(text);
-    });
+    editor.addEventListener('input', analyze, { passive: true });
+    editor.addEventListener('scroll', () => {
+      highlights.scrollTop = editor.scrollTop;
+      highlights.scrollLeft = editor.scrollLeft;
+    }, { passive: true });
 
-    applyAllBtn.addEventListener('click', applyAllErrors);
-
-    clearErrorsBtn.addEventListener('click', () => {
-      errors = [];
-      renderErrors();
-      setStatus('Lista limpiada.');
-    });
-
-    errorListEl.addEventListener('click', (event) => {
-      const button = event.target.closest('button[data-action]');
+    cards.addEventListener('click', (ev) => {
+      const button = ev.target.closest('button[data-action]');
       if (!button) return;
-      const index = Number(button.dataset.index);
-      const targetError = errors[index];
-      if (!targetError) return;
-
-      if (button.dataset.action === 'apply') {
-        applySingleError(targetError);
-      }
-
-      errors.splice(index, 1);
-      renderErrors();
-      scheduleCorrection(120);
+      const { action, id } = button.dataset;
+      if (action === 'accept') applyCorrection(id);
+      if (action === 'reject') rejectCorrection(id);
     });
 
-    renderErrors();
+    editor.value = 'Este texto qeu tiene errores de puntuación , y palabras tambine mal escritas.';
+    analyze();
+    editor.focus();
   </script>
 </body>
 </html>
