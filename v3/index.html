@@ -198,6 +198,7 @@
     let stateText = '';
     let activeErrors = [];
     let dismissed = new Set();
+    let analyzeSeq = 0;
 
     const debounce = (fn, delay = 120) => {
       let t = 0;
@@ -214,55 +215,27 @@
 
     const stableId = (e) => `${e.type}|${e.from}|${e.to}|${e.original}|${e.suggestion}`;
 
-    function mockDetectErrors(text) {
-      const out = [];
-
-      const words = [
-        ['qeu', 'que', 'ortografía'],
-        ['tambine', 'también', 'ortografía'],
-        ['definitavamente', 'definitivamente', 'ortografía'],
-        ['mas ', 'más ', 'ortografía'],
-        ['solo ', 'sólo ', 'ortografía']
-      ];
-
-      for (const [bad, good, type] of words) {
-        const re = new RegExp(bad.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
-        let m;
-        while ((m = re.exec(text)) !== null) {
-          out.push({
-            id: `${bad}-${m.index}`,
-            from: m.index,
-            to: m.index + bad.length,
-            original: m[0],
-            suggestion: m[0].replace(new RegExp(bad, 'i'), good),
-            type
-          });
-        }
-      }
-
-      const punctuation = /([\wáéíóúüñ])\s+([,.;:!?])/gi;
-      let p;
-      while ((p = punctuation.exec(text)) !== null) {
-        const from = p.index + p[1].length;
-        const to = from + (p[0].length - p[1].length - 1);
-        out.push({
-          id: `punct-space-${from}`,
-          from,
-          to,
-          original: text.slice(from, to),
-          suggestion: '',
-          type: 'puntuación'
-        });
-      }
-
-      return out
-        .filter(e => e.from >= 0 && e.to > e.from && e.to <= text.length)
+    function normalizeApiErrors(text, errors) {
+      return (Array.isArray(errors) ? errors : [])
+        .map((e) => ({
+          from: Number.isInteger(e.start) ? e.start : -1,
+          to: Number.isInteger(e.end) ? e.end : -1,
+          suggestion: typeof e.suggestion === 'string' ? e.suggestion : '',
+          type: typeof e.type === 'string' ? e.type : 'grammar'
+        }))
+        .filter((e) => e.from >= 0 && e.to > e.from && e.to <= text.length)
         .sort((a, b) => a.from - b.from || a.to - b.to)
         .reduce((acc, e) => {
           const last = acc[acc.length - 1];
-          if (!last || e.from >= last.to) acc.push(e);
+          if (!last || e.from >= last.to) {
+            acc.push({
+              ...e,
+              original: text.slice(e.from, e.to)
+            });
+          }
           return acc;
-        }, []);
+        }, [])
+        .map((e) => ({ ...e, id: stableId(e) }));
     }
 
     function renderHighlights(text, errors) {
@@ -281,7 +254,11 @@
       highlights.innerHTML = `${html}\n`;
     }
 
-    function renderCards(errors) {
+    function renderCards(errors, statusMessage = '') {
+      if (statusMessage) {
+        cards.innerHTML = `<div class="empty">${escapeHtml(statusMessage)}</div>`;
+        return;
+      }
       if (!errors.length) {
         cards.innerHTML = '<div class="empty">Sin sugerencias activas.</div>';
         return;
@@ -305,16 +282,94 @@
       cards.appendChild(frag);
     }
 
-    const analyze = debounce(() => {
+    async function fetchCorrections(text, seq) {
+      const response = await fetch('/api/correct', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      });
+
+      if (!response.ok || !response.body) {
+        return { type: 'error', status: response.status || 500 };
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let pending = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        if (seq !== analyzeSeq) return { type: 'stale' };
+
+        pending += decoder.decode(value, { stream: true });
+        const events = pending.split('\n\n');
+        pending = events.pop() || '';
+
+        for (const block of events) {
+          const dataLine = block.split('\n').find((line) => line.startsWith('data: '));
+          if (!dataLine) continue;
+          const payload = dataLine.slice(6).trim();
+          if (!payload) continue;
+
+          let parsed;
+          try {
+            parsed = JSON.parse(payload);
+          } catch {
+            continue;
+          }
+
+          if (parsed.type === 'error') {
+            return { type: 'error', status: parsed.status || 500 };
+          }
+
+          if (parsed.type === 'result') {
+            return { type: 'result', errors: parsed.errors || [] };
+          }
+        }
+      }
+
+      return { type: 'result', errors: [] };
+    }
+
+    const analyze = debounce(async () => {
       const text = editor.value;
       const changed = text !== stateText;
       stateText = text;
       if (changed) dismissed = new Set();
 
-      const all = mockDetectErrors(text).map(e => ({ ...e, id: stableId(e) }));
-      activeErrors = all.filter(e => !dismissed.has(e.id));
-      renderHighlights(text, activeErrors);
-      renderCards(activeErrors);
+      const seq = ++analyzeSeq;
+      renderHighlights(text, []);
+      renderCards([], 'Analizando texto...');
+
+      if (!text.trim()) {
+        activeErrors = [];
+        renderHighlights(text, activeErrors);
+        renderCards(activeErrors);
+        return;
+      }
+
+      try {
+        const result = await fetchCorrections(text, seq);
+        if (seq !== analyzeSeq || result.type === 'stale') return;
+
+        if (result.type === 'error') {
+          activeErrors = [];
+          renderHighlights(text, activeErrors);
+          renderCards([], `No se pudo analizar (OpenAI ${result.status}). Revisa tu API key.`);
+          return;
+        }
+
+        const all = normalizeApiErrors(text, result.errors);
+        activeErrors = all.filter((e) => !dismissed.has(e.id));
+        renderHighlights(text, activeErrors);
+        renderCards(activeErrors);
+      } catch {
+        if (seq !== analyzeSeq) return;
+        activeErrors = [];
+        renderHighlights(text, activeErrors);
+        renderCards([], 'No se pudo analizar (OpenAI 500). Revisa tu API key.');
+      }
     }, 120);
 
     function applyCorrection(id) {
@@ -340,10 +395,7 @@
       editor.value = next;
       editor.setSelectionRange(newStart, newEnd);
       dismissed = new Set();
-      const all = mockDetectErrors(next).map(e => ({ ...e, id: stableId(e) }));
-      activeErrors = all;
-      renderHighlights(next, activeErrors);
-      renderCards(activeErrors);
+      analyze();
     }
 
     function rejectCorrection(id) {
@@ -371,5 +423,7 @@
     analyze();
     editor.focus();
   </script>
+
+
 </body>
 </html>

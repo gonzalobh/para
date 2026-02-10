@@ -1,8 +1,41 @@
-const SYSTEM_PROMPT = `Detecta errores ortográficos y gramaticales.
-Responde SOLO JSON:
-{"errors":[{"errorText":"","suggestion":"","start":0,"end":1,"type":"spelling"}]}
+const SYSTEM_PROMPT = `Eres un corrector estricto de español.
+Detecta errores de:
+- ortografía (incluye tildes/diacríticos faltantes o incorrectos),
+- puntuación (comas, puntos, signos de pregunta/exclamación, mayúscula tras punto),
+- gramática.
 
-No incluir texto extra.`;
+Responde SOLO con JSON válido, sin texto adicional.
+Para cada error:
+- suggestion debe ser corta y directa.
+- start y end deben ser índices exactos (JS string indices) del fragmento en el texto original.
+- end siempre debe ser mayor que start.
+- type solo puede ser: spelling, punctuation o grammar.`;
+
+const RESPONSE_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    errors: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          errorText: { type: "string" },
+          suggestion: { type: "string" },
+          start: { type: "integer" },
+          end: { type: "integer" },
+          type: {
+            type: "string",
+            enum: ["spelling", "punctuation", "grammar"]
+          }
+        },
+        required: ["errorText", "suggestion", "start", "end", "type"]
+      }
+    }
+  },
+  required: ["errors"]
+};
 
 function parseModelJson(rawText) {
   const fallback = { errors: [] };
@@ -22,6 +55,62 @@ function parseModelJson(rawText) {
   }
 
   return fallback;
+}
+
+function normalizeIndices(errors, sourceText) {
+  const usedRanges = [];
+
+  const isOverlapping = (start, end) =>
+    usedRanges.some((range) => start < range.end && end > range.start);
+
+  const markUsed = (start, end) => {
+    usedRanges.push({ start, end });
+    usedRanges.sort((a, b) => a.start - b.start || a.end - b.end);
+  };
+
+  const out = [];
+
+  for (const error of errors || []) {
+    const entry = { ...error };
+    const hasValidIndices = Number.isInteger(entry.start) && Number.isInteger(entry.end) && entry.end > entry.start;
+
+    if (!hasValidIndices) {
+      const needle = typeof entry.errorText === "string" ? entry.errorText : "";
+      if (!needle) continue;
+
+      let idx = sourceText.indexOf(needle);
+      let matched = false;
+      while (idx !== -1) {
+        const end = idx + needle.length;
+        if (end > idx && !isOverlapping(idx, end)) {
+          entry.start = idx;
+          entry.end = end;
+          matched = true;
+          break;
+        }
+        idx = sourceText.indexOf(needle, idx + 1);
+      }
+
+      if (!matched) continue;
+    }
+
+    if (!Number.isInteger(entry.start) || !Number.isInteger(entry.end) || entry.end <= entry.start) {
+      continue;
+    }
+
+    if (entry.start < 0 || entry.end > sourceText.length) {
+      continue;
+    }
+
+    if (isOverlapping(entry.start, entry.end)) {
+      continue;
+    }
+
+    markUsed(entry.start, entry.end);
+    out.push(entry);
+  }
+
+  return out;
 }
 
 function toUiErrors(errors) {
@@ -77,16 +166,28 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "gpt-4.1-mini",
         temperature: 0,
-        max_output_tokens: 200,
+        max_output_tokens: 800,
         stream: true,
         instructions: SYSTEM_PROMPT,
-        input: safeText
+        input: safeText,
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "spanish_corrections",
+            strict: true,
+            schema: RESPONSE_SCHEMA
+          }
+        }
       })
     });
 
     if (!openaiResponse.ok || !openaiResponse.body) {
       console.error("OpenAI Responses API error:", openaiResponse.status);
-      res.write(`data: ${JSON.stringify({ type: "result", errors: [] })}\n\n`);
+      res.write(`data: ${JSON.stringify({
+        type: "error",
+        status: openaiResponse.status,
+        message: `OpenAI error ${openaiResponse.status}`
+      })}\n\n`);
       return res.end();
     }
 
@@ -134,7 +235,8 @@ export default async function handler(req, res) {
     }
 
     const parsedResult = parseModelJson(outputText);
-    const uiErrors = toUiErrors(parsedResult.errors);
+    const normalizedErrors = normalizeIndices(parsedResult.errors, safeText);
+    const uiErrors = toUiErrors(normalizedErrors);
 
     res.write(`data: ${JSON.stringify({ type: "result", errors: uiErrors })}\n\n`);
     return res.end();
@@ -148,7 +250,11 @@ export default async function handler(req, res) {
     }
 
     try {
-      res.write(`data: ${JSON.stringify({ type: "result", errors: [] })}\n\n`);
+      res.write(`data: ${JSON.stringify({
+        type: "error",
+        status: 500,
+        message: "OpenAI error 500"
+      })}\n\n`);
       res.end();
     } catch {
       res.end();
