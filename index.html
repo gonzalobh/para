@@ -1050,9 +1050,9 @@
     }
 
     .correction-panel-header {
-      padding: 16px;
+      padding: 16px 20px;
       background: #fff;
-      border-bottom: 1px solid #e0e0e0;
+      border-bottom: 1px solid #e5e5e5;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -1061,24 +1061,56 @@
 
     .correction-panel-title {
       font-size: 14px;
-      font-weight: 700;
-      color: #111;
+      font-weight: 400;
+      color: #202124;
       display: flex;
       align-items: center;
-      gap: 8px;
-      text-transform: uppercase;
-      letter-spacing: 0.3px;
+      gap: 6px;
     }
 
     .correction-count {
-      background: #ea4335;
-      color: white;
-      border-radius: 12px;
-      padding: 3px 10px;
+      color: #d93025;
+      font-size: 18px;
+      font-weight: 600;
+      margin-right: 4px;
+    }
+    
+    .correction-label {
+      color: #202124;
+      font-size: 14px;
+      font-weight: 400;
+    }
+    
+    .correction-suggestions {
+      color: #5f6368;
+      font-size: 14px;
+      font-weight: 400;
+    }
+    
+    /* Botón Accept all estilo QuillBot */
+    .accept-all-btn {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 16px;
+      background: #fff;
+      border: 1px solid #dadce0;
+      border-radius: 16px;
+      color: #202124;
       font-size: 13px;
-      font-weight: 700;
-      min-width: 24px;
-      text-align: center;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    
+    .accept-all-btn:hover {
+      background: #f8f9fa;
+      border-color: #5f6368;
+    }
+    
+    .accept-all-icon {
+      font-size: 14px;
+      color: #1e8e3e;
     }
 
     .correction-list {
@@ -1113,200 +1145,129 @@
       background: #a8a8a8;
     }
 
-    .correction-item {
+    /* ========================================
+       ESTILOS QUILLBOT - TARJETAS
+       ======================================== */
+    
+    .quillbot-card {
       background: #fff;
+      border: 1px solid #e5e5e5;
       border-radius: 8px;
-      padding: 10px 12px;
-      border: 1px solid #e0e0e0;
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-      cursor: pointer;
-      /* Compacto por defecto */
-    }
-
-    .correction-item:hover {
-      border-color: #0b57d0;
-      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
-    }
-
-    .correction-item.active {
-      border-color: #0b57d0;
-      background: #f8fbff;
-      box-shadow: 0 2px 8px rgba(11, 87, 208, 0.15);
-      padding: 14px;
-      transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    .correction-item-header {
-      display: flex;
-      align-items: center;
-      gap: 10px;
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: all 0.2s ease;
     }
     
-    /* Ocultar contenido expandido por defecto */
-    .correction-item-content {
-      flex: 1;
-      min-width: 0;
+    .quillbot-card:hover {
+      border-color: #d0d0d0;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     }
     
-    /* Texto compacto de una línea */
-    .correction-compact-text {
-      font-size: 14px;
-      color: #202124;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .quillbot-card-header {
       display: flex;
       align-items: center;
       gap: 8px;
+      margin-bottom: 12px;
     }
     
-    /* Ocultar detalles cuando está colapsado */
-    .correction-item:not(.active) .correction-type,
-    .correction-item:not(.active) .correction-error-text,
-    .correction-item:not(.active) .correction-suggestion,
-    .correction-item:not(.active) .correction-actions {
-      display: none;
+    .quillbot-error-icon {
+      color: #d93025;
+      font-size: 12px;
     }
     
-    /* Mostrar solo texto compacto cuando está colapsado */
-    .correction-item.active .correction-compact-text {
-      display: none;
+    .quillbot-error-title {
+      flex: 1;
+      color: #202124;
+      font-size: 13px;
+      font-weight: 500;
     }
-
-    .correction-icon {
-      width: 8px;
-      height: 8px;
+    
+    .quillbot-help-btn {
+      width: 18px;
+      height: 18px;
       border-radius: 50%;
-      flex-shrink: 0;
-    }
-
-    .correction-icon-spelling {
-      background: #ea4335;
-    }
-
-    .correction-icon-punctuation {
-      background: #fbbc04;
-    }
-
-    .correction-type {
+      border: 1px solid #dadce0;
+      background: #fff;
+      color: #5f6368;
       font-size: 11px;
       font-weight: 600;
-      color: #5f6368;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      margin-bottom: 6px;
-    }
-
-    .correction-error-text {
-      font-size: 14px;
-      color: #202124;
-      font-weight: 400;
-      margin-bottom: 8px;
-      word-break: break-word;
-      line-height: 1.4;
-    }
-
-    .correction-error-word {
-      color: #ea4335;
-      font-weight: 600;
-      background: rgba(234, 67, 53, 0.1);
-      padding: 2px 4px;
-      border-radius: 4px;
-    }
-
-    .correction-suggestion-text {
-      font-size: 13px;
-      color: #5f6368;
-      margin-bottom: 10px;
-      line-height: 1.4;
-    }
-
-    .correction-suggestion {
-      background: #e8f0fe;
-      color: #0b57d0;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      display: inline-block;
-      margin-bottom: 8px;
-      margin-right: 6px;
-      word-break: break-word;
-      cursor: pointer;
-      transition: all 0.15s ease;
-    }
-
-    .correction-suggestion:hover {
-      background: #d2e3fc;
-    }
-
-    .correction-actions {
       display: flex;
-      gap: 8px;
-      margin-top: 10px;
-    }
-
-    .correction-btn {
-      padding: 6px 12px;
-      border: 1px solid #dadce0;
-      background: #fff;
-      color: #5f6368;
-      border-radius: 6px;
-      font-size: 13px;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
-      transition: all 0.15s ease;
-      font-weight: 500;
+      transition: all 0.2s ease;
     }
-
-    .correction-btn:hover {
+    
+    .quillbot-help-btn:hover {
       background: #f8f9fa;
-      border-color: #c1c1c1;
+      border-color: #5f6368;
     }
-      transition: background 0.2s ease;
+    
+    .quillbot-card-body {
+      margin-bottom: 12px;
     }
-
-    .correction-suggestion:hover {
-      background: #d2e3fc;
+    
+    .quillbot-context {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #202124;
     }
-
-    .correction-actions {
+    
+    .quillbot-error-word {
+      text-decoration: line-through;
+      color: #5f6368;
+      font-weight: 400;
+    }
+    
+    .quillbot-correction-word {
+      color: #1e8e3e;
+      font-weight: 500;
+    }
+    
+    .quillbot-card-actions {
       display: flex;
       gap: 8px;
-      margin-top: 10px;
     }
-
-    .correction-btn {
-      flex: 1;
-      padding: 8px 14px;
-      border-radius: 8px;
-      border: 1px solid #dadce0;
-      background: #fff;
+    
+    .quillbot-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 16px;
+      border-radius: 6px;
       font-size: 13px;
       font-weight: 500;
       cursor: pointer;
       transition: all 0.2s ease;
-      white-space: nowrap;
+      border: none;
+      outline: none;
     }
-
-    .correction-btn:hover {
+    
+    .quillbot-btn-accept {
+      background: #1e8e3e;
+      color: #fff;
+      flex: 1;
+    }
+    
+    .quillbot-btn-accept:hover {
+      background: #188038;
+    }
+    
+    .quillbot-btn-icon {
+      font-size: 14px;
+    }
+    
+    .quillbot-btn-ignore {
+      background: #fff;
+      color: #5f6368;
+      border: 1px solid #dadce0;
+      padding: 8px 20px;
+    }
+    
+    .quillbot-btn-ignore:hover {
       background: #f8f9fa;
       border-color: #5f6368;
-    }
-
-    .correction-btn-accept {
-      background: #0b57d0;
-      color: white;
-      border-color: #0b57d0;
-    }
-
-    .correction-btn-accept:hover {
-      background: #0842a0;
-      border-color: #0842a0;
-    }
-
-    .correction-item-ignored {
-      opacity: 0.4;
-      pointer-events: none;
     }
 
     .no-corrections {
@@ -1421,9 +1382,13 @@
           <div class="correction-panel" id="correctionPanel">
             <div class="correction-panel-header">
               <div class="correction-panel-title">
-                Corregir
                 <span class="correction-count" id="correctionCount">0</span>
+                <span class="correction-label">grammar</span>
+                <span class="correction-suggestions">suggestions</span>
               </div>
+              <button class="accept-all-btn" id="acceptAllBtn" style="display: none;">
+                <span class="accept-all-icon">✓</span> Accept all
+              </button>
             </div>
             <div class="correction-list" id="correctionList">
               <div class="no-corrections">
@@ -2947,18 +2912,28 @@
     function renderCorrectionsList() {
       const correctionList = document.getElementById('correctionList');
       const correctionCount = document.getElementById('correctionCount');
+      const acceptAllBtn = document.getElementById('acceptAllBtn');
       
       if (!correctionList || !correctionCount) return;
       
       const activeCorrections = corrections.filter(c => !c.ignored && !c.accepted);
       correctionCount.textContent = activeCorrections.length;
       
+      // Mostrar/ocultar botón Accept all
+      if (acceptAllBtn) {
+        if (activeCorrections.length > 0) {
+          acceptAllBtn.style.display = 'flex';
+        } else {
+          acceptAllBtn.style.display = 'none';
+        }
+      }
+      
       // Si no hay texto en el input, no mostrar nada
       const currentText = getPlainText(inputTextCorrectable);
       if (!currentText || currentText.trim().length === 0) {
         correctionList.innerHTML = '';
         correctionCount.textContent = '0';
-        correctionCount.style.display = 'none';
+        if (acceptAllBtn) acceptAllBtn.style.display = 'none';
         return;
       }
       
@@ -2970,90 +2945,79 @@
             <div><strong>No se encontraron errores</strong></div>
           </div>
         `;
-        correctionCount.style.display = 'inline-block';
         return;
       }
       
-      // Si hay errores
-      correctionCount.style.display = 'inline-block';
-      
+      // ESTILO QUILLBOT: Tarjetas siempre expandidas
       correctionList.innerHTML = activeCorrections.map(error => {
-        // Determinar el label del tipo de error
-        let typeLabel = 'Gramática';
-        if (error.type === 'spelling') {
-          typeLabel = 'Ortografía';
-        } else if (error.type === 'punctuation') {
-          typeLabel = 'Puntuación';
+        // Determinar el título del error estilo QuillBot
+        let errorTitle = 'Agrega una tilde';
+        const msg = error.message.toLowerCase();
+        
+        if (msg.includes('subjuntivo')) {
+          errorTitle = 'Corrige el uso del subjuntivo';
+        } else if (msg.includes('acentuación') || msg.includes('acentuacion')) {
+          errorTitle = 'Corrige la acentuación';
+        } else if (msg.includes('tilde')) {
+          errorTitle = 'Agrega una tilde';
+        } else if (msg.includes('mayúscula') || msg.includes('mayuscula')) {
+          errorTitle = 'Usa mayúscula';
+        } else if (msg.includes('puntuación') || msg.includes('puntuacion')) {
+          errorTitle = 'Corrige la puntuación';
+        } else if (msg.includes('concordancia')) {
+          errorTitle = 'Corrige la concordancia';
+        } else if (error.type === 'spelling') {
+          errorTitle = 'Corrige la ortografía';
+        } else {
+          // Usar el mensaje original si no hay match
+          errorTitle = error.message.charAt(0).toUpperCase() + error.message.slice(1);
         }
         
-        const iconClass = error.type === 'spelling' 
-          ? 'correction-icon-spelling' 
-          : 'correction-icon-punctuation';
-        const isActive = activeErrorId === error.id;
-        
-        // Texto compacto para mostrar cuando está colapsado
-        const compactText = `${error.errorText} → ${error.suggestion}`;
-        
-        // Generar HTML para todas las sugerencias
-        const allSuggestions = error.allSuggestions || [error.suggestion];
-        const suggestionsHTML = allSuggestions
-          .filter(s => s && s.trim().length > 0)
-          .slice(0, 3) // Máximo 3 sugerencias
-          .map((suggestion, idx) => `
-            <div class="correction-suggestion" data-action="apply-suggestion" data-suggestion="${escapeHtml(suggestion)}">
-              ${escapeHtml(suggestion)}
-            </div>
-          `).join('');
+        // Obtener contexto (oración completa con palabra tachada)
+        const context = getErrorContext(error, currentText);
         
         return `
-          <div class="correction-item ${isActive ? 'active' : ''}" data-error-id="${error.id}">
-            <div class="correction-item-header">
-              <div class="correction-icon ${iconClass}"></div>
-              <div class="correction-item-content">
-                <!-- Texto compacto (solo visible cuando NO está activo) -->
-                <div class="correction-compact-text">
-                  <span style="color: #ea4335; font-weight: 500;">${escapeHtml(error.errorText)}</span>
-                  <span style="color: #5f6368;">→</span>
-                  <span style="color: #0b57d0; font-weight: 500;">${escapeHtml(error.suggestion)}</span>
-                </div>
-                
-                <!-- Contenido expandido (solo visible cuando está activo) -->
-                <div class="correction-type">${typeLabel}</div>
-                <div class="correction-error-text">
-                  ${escapeHtml(error.message)}
-                </div>
-                ${suggestionsHTML}
-                <div class="correction-actions">
-                  <button class="correction-btn" data-action="ignore">
-                    Ignorar
-                  </button>
-                </div>
+          <div class="quillbot-card" data-error-id="${error.id}">
+            <div class="quillbot-card-header">
+              <span class="quillbot-error-icon">●</span>
+              <span class="quillbot-error-title">${escapeHtml(errorTitle)}</span>
+              <button class="quillbot-help-btn" title="Más información">?</button>
+            </div>
+            
+            <div class="quillbot-card-body">
+              <div class="quillbot-context">
+                ${context}
               </div>
+            </div>
+            
+            <div class="quillbot-card-actions">
+              <button class="quillbot-btn quillbot-btn-accept" data-action="accept">
+                <span class="quillbot-btn-icon">✓</span> Accept
+              </button>
+              <button class="quillbot-btn quillbot-btn-ignore" data-action="ignore">
+                Ignore
+              </button>
             </div>
           </div>
         `;
       }).join('');
       
       // Agregar event listeners
-      correctionList.querySelectorAll('.correction-item').forEach(item => {
-        const errorId = parseInt(item.dataset.errorId);
+      correctionList.querySelectorAll('.quillbot-card').forEach(card => {
+        const errorId = parseInt(card.dataset.errorId);
         
-        item.addEventListener('click', (e) => {
-          if (!e.target.closest('[data-action]')) {
-            toggleErrorHighlight(errorId);
-          }
-        });
-        
-        // Event listener para cada sugerencia
-        item.querySelectorAll('[data-action="apply-suggestion"]').forEach(suggestionBtn => {
-          suggestionBtn.addEventListener('click', (e) => {
+        const acceptBtn = card.querySelector('[data-action="accept"]');
+        if (acceptBtn) {
+          acceptBtn.addEventListener('click', (e) => {
             e.stopPropagation();
-            const suggestion = suggestionBtn.dataset.suggestion;
-            applySuggestion(errorId, suggestion);
+            const error = corrections.find(c => c.id === errorId);
+            if (error) {
+              applySuggestion(errorId, error.suggestion);
+            }
           });
-        });
+        }
         
-        const ignoreBtn = item.querySelector('[data-action="ignore"]');
+        const ignoreBtn = card.querySelector('[data-action="ignore"]');
         if (ignoreBtn) {
           ignoreBtn.addEventListener('click', (e) => {
             e.stopPropagation();
@@ -3062,6 +3026,45 @@
         }
       });
     }
+    
+    // Función para obtener el contexto de un error (oración completa con palabra tachada y corrección)
+    function getErrorContext(error, fullText) {
+      // Encontrar el inicio y fin de la oración
+      const beforeError = fullText.substring(0, error.start);
+      const afterError = fullText.substring(error.end);
+      
+      // Buscar el punto anterior (o inicio del texto)
+      const lastPeriod = beforeError.lastIndexOf('.');
+      const sentenceStart = lastPeriod >= 0 ? lastPeriod + 1 : 0;
+      
+      // Buscar el siguiente punto (o fin del texto)
+      const nextPeriod = afterError.indexOf('.');
+      const sentenceEnd = nextPeriod >= 0 ? error.end + nextPeriod + 1 : fullText.length;
+      
+      // Extraer la oración completa
+      const sentence = fullText.substring(sentenceStart, sentenceEnd).trim();
+      
+      // Construir HTML con palabra tachada y corrección en verde
+      const errorStart = error.start - sentenceStart;
+      const errorEnd = error.end - sentenceStart;
+      
+      const before = sentence.substring(0, errorStart);
+      const errorWord = sentence.substring(errorStart, errorEnd);
+      const after = sentence.substring(errorEnd);
+      
+      return `
+        ${escapeHtml(before)}<span class="quillbot-error-word">${escapeHtml(errorWord)}</span> <span class="quillbot-correction-word">${escapeHtml(error.suggestion)}</span>${escapeHtml(after)}
+      `;
+    }
+    
+    // Event listener para Accept all
+    document.getElementById('acceptAllBtn')?.addEventListener('click', function() {
+      const activeCorrections = corrections.filter(c => !c.ignored && !c.accepted);
+      
+      activeCorrections.forEach(error => {
+        applySuggestion(error.id, error.suggestion);
+      });
+    });
     
     // Toggle para expandir/colapsar error (como LanguageTool)
     function toggleErrorHighlight(errorId) {
