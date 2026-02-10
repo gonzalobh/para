@@ -692,6 +692,74 @@
       min-height: 0;
     }
 
+    /* ========================================
+       TEXTAREA CON HIGHLIGHTING OVERLAY
+       ======================================== */
+    
+    .textarea-with-highlighting {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      min-height: 300px;
+    }
+    
+    .highlighting-background {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 12px;
+      border: 1px solid transparent;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      overflow: auto;
+      color: transparent;
+      background: transparent;
+      pointer-events: none;
+      z-index: 1;
+    }
+    
+    .input-with-corrections-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 12px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      background: transparent;
+      color: #222;
+      resize: vertical;
+      outline: none;
+      z-index: 2;
+    }
+    
+    .input-with-corrections-overlay:focus {
+      border-color: #999;
+    }
+    
+    /* Errores subrayados en el background */
+    .highlighting-background .error-highlight {
+      background: transparent;
+      border-bottom: 2px solid #d93025;
+      color: transparent;
+      position: relative;
+    }
+    
+    /* Sincronizar scroll entre textarea y background */
+    .textarea-with-highlighting .input-with-corrections-overlay::-webkit-scrollbar,
+    .textarea-with-highlighting .highlighting-background::-webkit-scrollbar {
+      width: 8px;
+    }
+
     /* Transición suave al ocultar columna izquierda */
     .editor{
       transition: grid-template-columns .25s ease, gap .25s ease;
@@ -1355,7 +1423,13 @@
             <div class="panel-status" aria-hidden="true"></div>
             <div class="input-panel">
               <textarea id="inputText" placeholder="Ingresa el texto que quieres parafrasear..."></textarea>
-              <textarea id="inputTextCorrectable" class="input-with-corrections" style="display: none; width: 100%; min-height: 300px; border: none; outline: none; resize: vertical; font-family: inherit; font-size: inherit; padding: 12px;" placeholder="Escribe o pega tu texto aquí para revisar ortografía y gramática..."></textarea>
+              
+              <!-- Contenedor para textarea con highlighting -->
+              <div class="textarea-with-highlighting" style="display: none;">
+                <div id="highlightingBackground" class="highlighting-background"></div>
+                <textarea id="inputTextCorrectable" class="input-with-corrections-overlay" placeholder="Escribe o pega tu texto aquí para revisar ortografía y gramática..."></textarea>
+              </div>
+              
               <button id="copyInput" class="copy-btn" type="button" aria-label="Copiar entrada">Copiar</button>
             </div>
             <div class="controls paraphrase-controls">
@@ -2944,8 +3018,9 @@
       
       corrections = detectedErrors;
       renderCorrectionsList();
-      // NO modificar el textarea - mantenerlo como texto plano editable
-      // setTextWithErrors(text, corrections.filter(c => !c.ignored && !c.accepted));
+      
+      // Actualizar highlighting en el background
+      updateHighlighting(text, corrections.filter(c => !c.ignored && !c.accepted));
       
       // Actualizar contador de caracteres
       const inputCharCount = document.getElementById('inputCharCount');
@@ -3075,6 +3150,43 @@
       }
       
       return errors;
+    }
+    
+    // Función para actualizar highlighting en el background
+    function updateHighlighting(text, errors) {
+      const highlightingBg = document.getElementById('highlightingBackground');
+      if (!highlightingBg) return;
+      
+      if (!text || errors.length === 0) {
+        highlightingBg.textContent = text || '';
+        return;
+      }
+      
+      // Ordenar errores por posición
+      const sortedErrors = [...errors].sort((a, b) => a.start - b.start);
+      
+      // Construir HTML con errores resaltados
+      let html = '';
+      let lastIndex = 0;
+      
+      sortedErrors.forEach(error => {
+        // Texto antes del error
+        if (error.start > lastIndex) {
+          html += escapeHtml(text.substring(lastIndex, error.start));
+        }
+        
+        // Error resaltado
+        html += `<span class="error-highlight">${escapeHtml(error.errorText)}</span>`;
+        
+        lastIndex = error.end;
+      });
+      
+      // Texto restante
+      if (lastIndex < text.length) {
+        html += escapeHtml(text.substring(lastIndex));
+      }
+      
+      highlightingBg.innerHTML = html;
     }
     
     // Renderizar lista de correcciones
@@ -3524,19 +3636,35 @@
     // Toggle entre modo normal y modo corrección
     function toggleCorrectionMode(isCorrectionMode) {
       if (isCorrectionMode) {
-        // Copiar texto del textarea al div editable
+        // Copiar texto del textarea al textarea correctable
         const text = input.value;
-        inputTextCorrectable.textContent = text;
+        if (inputTextCorrectable.tagName === 'TEXTAREA') {
+          inputTextCorrectable.value = text;
+        } else {
+          inputTextCorrectable.textContent = text;
+        }
+        
         input.style.display = 'none';
-        inputTextCorrectable.style.display = 'block';
+        
+        // Mostrar contenedor completo con highlighting
+        const highlightingContainer = document.querySelector('.textarea-with-highlighting');
+        if (highlightingContainer) {
+          highlightingContainer.style.display = 'block';
+        }
         
         // Iniciar chequeo
         checkCorrections();
       } else {
-        // Copiar texto del div editable al textarea
+        // Copiar texto del textarea correctable al textarea normal
         const text = getPlainText(inputTextCorrectable);
         input.value = text;
-        inputTextCorrectable.style.display = 'none';
+        
+        // Ocultar contenedor completo con highlighting
+        const highlightingContainer = document.querySelector('.textarea-with-highlighting');
+        if (highlightingContainer) {
+          highlightingContainer.style.display = 'none';
+        }
+        
         input.style.display = 'block';
         
         // Limpiar correcciones
@@ -3560,8 +3688,27 @@
     inputTextCorrectable.addEventListener('paste', (e) => {
       e.preventDefault();
       const text = (e.clipboardData || window.clipboardData).getData('text/plain');
-      document.execCommand('insertText', false, text);
+      
+      // Para textarea usar execCommand
+      if (inputTextCorrectable.tagName === 'TEXTAREA') {
+        const start = inputTextCorrectable.selectionStart;
+        const end = inputTextCorrectable.selectionEnd;
+        const currentValue = inputTextCorrectable.value;
+        inputTextCorrectable.value = currentValue.substring(0, start) + text + currentValue.substring(end);
+        inputTextCorrectable.selectionStart = inputTextCorrectable.selectionEnd = start + text.length;
+      } else {
+        document.execCommand('insertText', false, text);
+      }
     });
+    
+    // Sincronizar scroll entre textarea y background
+    const highlightingBg = document.getElementById('highlightingBackground');
+    if (highlightingBg) {
+      inputTextCorrectable.addEventListener('scroll', function() {
+        highlightingBg.scrollTop = this.scrollTop;
+        highlightingBg.scrollLeft = this.scrollLeft;
+      });
+    }
     
     // Inicializar modo corrección si es el modo activo
     renderModeControls();
