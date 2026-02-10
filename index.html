@@ -1080,99 +1080,6 @@
       min-width: 24px;
       text-align: center;
     }
-    
-    /* Ocultar el contador cuando no hay errores */
-    .correction-count:empty,
-    .correction-count[data-count="0"] {
-      display: none;
-    }
-    
-    /* Selector regional minimalista */
-    .region-selector {
-      padding: 4px 8px;
-      border: 1px solid #e0e0e0;
-      border-radius: 6px;
-      background: #fff;
-      color: #5f6368;
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      outline: none;
-    }
-    
-    .region-selector:hover {
-      border-color: #c0c0c0;
-      background: #fafafa;
-    }
-    
-    .region-selector:focus {
-      border-color: #111;
-    }
-    
-    /* Detector de tono */
-    .tone-detector {
-      padding: 12px 16px;
-      background: #fafafa;
-      border-bottom: 1px solid #e0e0e0;
-      animation: slideDown 0.3s ease;
-    }
-    
-    @keyframes slideDown {
-      from {
-        opacity: 0;
-        transform: translateY(-10px);
-      }
-      to {
-        opacity: 1;
-        transform: translateY(0);
-      }
-    }
-    
-    .tone-message {
-      font-size: 13px;
-      color: #5f6368;
-      margin-bottom: 10px;
-      line-height: 1.4;
-    }
-    
-    .tone-actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-    
-    .tone-btn {
-      padding: 6px 12px;
-      border: 1px solid #e0e0e0;
-      background: #fff;
-      color: #202124;
-      border-radius: 6px;
-      font-size: 12px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      white-space: nowrap;
-    }
-    
-    .tone-btn:hover {
-      background: #111;
-      color: #fff;
-      border-color: #111;
-    }
-    
-    .tone-btn-dismiss {
-      padding: 4px 10px;
-      margin-left: auto;
-      font-size: 16px;
-      color: #5f6368;
-    }
-    
-    .tone-btn-dismiss:hover {
-      background: #e0e0e0;
-      color: #202124;
-      border-color: #e0e0e0;
-    }
 
     .correction-list {
       flex: 1;
@@ -1257,9 +1164,7 @@
     .correction-item:not(.active) .correction-type,
     .correction-item:not(.active) .correction-error-text,
     .correction-item:not(.active) .correction-suggestion,
-    .correction-item:not(.active) .correction-actions,
-    .correction-item:not(.active) .smart-replace,
-    .correction-item:not(.active) .translation-bar {
+    .correction-item:not(.active) .correction-actions {
       display: none;
     }
     
@@ -1395,100 +1300,6 @@
     }
 
     .correction-btn-accept:hover {
-      background: #094ba8;
-    }
-    
-    /* Smart Replace - minimalista */
-    .smart-replace {
-      margin: 10px 0 8px 0;
-      padding-top: 8px;
-      border-top: 1px solid #f0f0f0;
-    }
-    
-    .smart-replace-trigger {
-      font-size: 12px;
-      color: #5f6368;
-      cursor: pointer;
-      display: inline-block;
-      padding: 4px 0;
-      transition: color 0.2s ease;
-    }
-    
-    .smart-replace-trigger:hover {
-      color: #202124;
-      text-decoration: underline;
-    }
-    
-    .smart-replace-results {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px;
-      margin-top: 6px;
-    }
-    
-    .synonym-chip {
-      padding: 4px 10px;
-      background: #f8f8f8;
-      border: 1px solid #e8e8e8;
-      border-radius: 12px;
-      font-size: 12px;
-      color: #202124;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    
-    .synonym-chip:hover {
-      background: #202124;
-      color: #fff;
-      border-color: #202124;
-    }
-    
-    /* Traductor - ultra minimalista */
-    .translation-bar {
-      margin: 10px 0 8px 0;
-      padding-top: 8px;
-      border-top: 1px solid #f0f0f0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-    
-    .translation-trigger {
-      padding: 3px 8px;
-      background: #fafafa;
-      border: 1px solid #e8e8e8;
-      border-radius: 4px;
-      font-size: 11px;
-      font-weight: 600;
-      color: #5f6368;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      letter-spacing: 0.3px;
-    }
-    
-    .translation-trigger:hover {
-      background: #202124;
-      color: #fff;
-      border-color: #202124;
-    }
-    
-    .translation-result {
-      font-size: 12px;
-      color: #202124;
-      padding: 4px 8px;
-      background: #fafafa;
-      border-radius: 4px;
-      flex: 1;
-      min-width: 100px;
-      display: none;
-    }
-    
-    .translation-result.visible {
-      display: block;
-    }
-
-    .correction-btn-accept:hover {
       background: #0842a0;
       border-color: #0842a0;
     }
@@ -1614,17 +1425,6 @@
                 <span class="correction-count" id="correctionCount">0</span>
               </div>
             </div>
-            
-            <!-- Detector de tono (oculto por defecto) -->
-            <div class="tone-detector" id="toneDetector" style="display: none;">
-              <div class="tone-message" id="toneMessage"></div>
-              <div class="tone-actions">
-                <button class="tone-btn" data-action="formal">Unificar formal</button>
-                <button class="tone-btn" data-action="informal">Unificar informal</button>
-                <button class="tone-btn tone-btn-dismiss" data-action="dismiss">×</button>
-              </div>
-            </div>
-            
             <div class="correction-list" id="correctionList">
               <div class="no-corrections">
                 <div class="no-corrections-icon">✓</div>
@@ -3116,7 +2916,16 @@
     async function checkCorrections() {
       const text = getPlainText(inputTextCorrectable);
       
-      // NO mostrar "Analizando texto..." - llamar directamente a la API
+      // Mostrar indicador de carga
+      const correctionList = document.getElementById('correctionList');
+      if (correctionList) {
+        correctionList.innerHTML = `
+          <div class="no-corrections">
+            <div class="no-corrections-icon">⏳</div>
+            <div><strong>Analizando texto...</strong></div>
+          </div>
+        `;
+      }
       
       // Llamar a la API para detectar errores
       const detectedErrors = await detectErrorsAPI(text);
@@ -3152,22 +2961,7 @@
       
       const activeCorrections = corrections.filter(c => !c.ignored && !c.accepted);
       correctionCount.textContent = activeCorrections.length;
-      correctionCount.setAttribute('data-count', activeCorrections.length);
       
-      // Si no hay texto en el input, no mostrar nada
-      const currentText = getPlainText(inputTextCorrectable);
-      if (!currentText || currentText.trim().length === 0) {
-        correctionList.innerHTML = '';
-        correctionCount.textContent = '0';
-        correctionCount.setAttribute('data-count', '0');
-        correctionCount.style.display = 'none';
-        return;
-      }
-      
-      // Detectar inconsistencias de tono (formal/informal)
-      detectToneInconsistency(currentText);
-      
-      // Si hay texto pero no errores
       if (activeCorrections.length === 0) {
         correctionList.innerHTML = `
           <div class="no-corrections">
@@ -3175,12 +2969,8 @@
             <div><strong>No se encontraron errores</strong></div>
           </div>
         `;
-        correctionCount.style.display = 'inline-block';
         return;
       }
-      
-      // Si hay errores
-      correctionCount.style.display = 'inline-block';
       
       correctionList.innerHTML = activeCorrections.map(error => {
         // Determinar el label del tipo de error
@@ -3196,37 +2986,19 @@
           : 'correction-icon-punctuation';
         const isActive = activeErrorId === error.id;
         
+        // Texto compacto para mostrar cuando está colapsado
+        const compactText = `${error.errorText} → ${error.suggestion}`;
+        
         // Generar HTML para todas las sugerencias
         const allSuggestions = error.allSuggestions || [error.suggestion];
         const suggestionsHTML = allSuggestions
           .filter(s => s && s.trim().length > 0)
-          .slice(0, 3)
+          .slice(0, 3) // Máximo 3 sugerencias
           .map((suggestion, idx) => `
             <div class="correction-suggestion" data-action="apply-suggestion" data-suggestion="${escapeHtml(suggestion)}">
               ${escapeHtml(suggestion)}
             </div>
           `).join('');
-        
-        // Smart Replace: obtener sinónimos contextuales (minimalista)
-        const smartReplaceHTML = isActive ? `
-          <div class="smart-replace" data-error-id="${error.id}">
-            <div class="smart-replace-trigger" onclick="loadSmartReplace(${error.id}, '${escapeHtml(error.errorText)}')">
-              Sinónimos...
-            </div>
-            <div class="smart-replace-results" id="smartReplace${error.id}"></div>
-          </div>
-        ` : '';
-        
-        // Traductor minimalista (solo iconos de banderas)
-        const translationHTML = isActive ? `
-          <div class="translation-bar">
-            <span class="translation-trigger" onclick="translate(${error.id}, '${escapeHtml(error.suggestion)}', 'en')" title="English">EN</span>
-            <span class="translation-trigger" onclick="translate(${error.id}, '${escapeHtml(error.suggestion)}', 'fr')" title="Français">FR</span>
-            <span class="translation-trigger" onclick="translate(${error.id}, '${escapeHtml(error.suggestion)}', 'de')" title="Deutsch">DE</span>
-            <span class="translation-trigger" onclick="translate(${error.id}, '${escapeHtml(error.suggestion)}', 'pt')" title="Português">PT</span>
-            <div class="translation-result" id="translation${error.id}"></div>
-          </div>
-        ` : '';
         
         return `
           <div class="correction-item ${isActive ? 'active' : ''}" data-error-id="${error.id}">
@@ -3235,9 +3007,9 @@
               <div class="correction-item-content">
                 <!-- Texto compacto (solo visible cuando NO está activo) -->
                 <div class="correction-compact-text">
-                  <span style="color: #5f6368; font-weight: 500;">${escapeHtml(error.errorText)}</span>
-                  <span style="color: #d0d0d0;">→</span>
-                  <span style="color: #202124; font-weight: 500;">${escapeHtml(error.suggestion)}</span>
+                  <span style="color: #ea4335; font-weight: 500;">${escapeHtml(error.errorText)}</span>
+                  <span style="color: #5f6368;">→</span>
+                  <span style="color: #0b57d0; font-weight: 500;">${escapeHtml(error.suggestion)}</span>
                 </div>
                 
                 <!-- Contenido expandido (solo visible cuando está activo) -->
@@ -3246,11 +3018,9 @@
                   ${escapeHtml(error.message)}
                 </div>
                 ${suggestionsHTML}
-                ${smartReplaceHTML}
-                ${translationHTML}
                 <div class="correction-actions">
                   <button class="correction-btn" data-action="ignore">
-                    Ignorar
+                    Ignorar en este texto
                   </button>
                 </div>
               </div>
@@ -3430,204 +3200,14 @@
       }
     }
     
-    // ============================================
-    // FEATURE 1: Detector de Tono Contextual
-    // ============================================
-    function detectToneInconsistency(text) {
-      const toneDetector = document.getElementById('toneDetector');
-      const toneMessage = document.getElementById('toneMessage');
-      
-      if (!toneDetector || !toneMessage) return;
-      
-      // Patrones formales e informales
-      const formalPatterns = [
-        /\bEstimado\b/i, /\bAtentamente\b/i, /\busted\b/i, /\bseñor\b/i,
-        /\bseñora\b/i, /\bpermítame\b/i, /\ble informo\b/i, /\ble agradezco\b/i
-      ];
-      
-      const informalPatterns = [
-        /\btú\b/i, /\bhola\b(?! señor)/i, /\bche\b/i, /\btío\b/i,
-        /\bchava\b/i, /\bwey\b/i, /\bboludo\b/i, /\bqué tal\b/i
-      ];
-      
-      const hasFormal = formalPatterns.some(pattern => pattern.test(text));
-      const hasInformal = informalPatterns.some(pattern => pattern.test(text));
-      
-      if (hasFormal && hasInformal) {
-        toneMessage.textContent = 'Detecté lenguaje formal e informal mezclado. ¿Prefieres unificar el tono?';
-        toneDetector.style.display = 'block';
-      } else {
-        toneDetector.style.display = 'none';
-      }
-    }
-    
-    // Unificar tono (formal/informal)
-    function unifyTone(tone) {
-      const text = getPlainText(inputTextCorrectable);
-      let newText = text;
-      
-      if (tone === 'formal') {
-        // Convertir a formal
-        newText = newText
-          .replace(/\btú\b/gi, 'usted')
-          .replace(/\btienes\b/gi, 'tiene')
-          .replace(/\beres\b/gi, 'es')
-          .replace(/\btu\b/gi, 'su')
-          .replace(/\bte\b/gi, 'le')
-          .replace(/\bhola\b/gi, 'Estimado')
-          .replace(/\bgracias\b/gi, 'Le agradezco');
-      } else {
-        // Convertir a informal
-        newText = newText
-          .replace(/\busted\b/gi, 'tú')
-          .replace(/\bEstimado\b/gi, 'Hola')
-          .replace(/\bAtentamente\b/gi, 'Saludos')
-          .replace(/\ble informo\b/gi, 'te informo')
-          .replace(/\ble agradezco\b/gi, 'te agradezco');
-      }
-      
-      inputTextCorrectable.textContent = newText;
-      document.getElementById('toneDetector').style.display = 'none';
-      
-      // Re-analizar
-      setTimeout(() => checkCorrections(), 100);
-    }
-    
-    // ============================================
-    // FEATURE 2: Corrector Regional
-    // ============================================
-    const REGIONAL_VARIANTS = {
-      'carro': { 'es': 'coche', 'ar': 'auto', 'mx': 'carro', 'co': 'carro', 'cl': 'auto' },
-      'auto': { 'es': 'coche', 'ar': 'auto', 'mx': 'carro', 'co': 'carro', 'cl': 'auto' },
-      'coche': { 'es': 'coche', 'ar': 'auto', 'mx': 'carro', 'co': 'carro', 'cl': 'auto' },
-      'computadora': { 'es': 'ordenador', 'ar': 'computadora', 'mx': 'computadora', 'co': 'computador', 'cl': 'computador' },
-      'ordenador': { 'es': 'ordenador', 'ar': 'computadora', 'mx': 'computadora', 'co': 'computador', 'cl': 'computador' },
-      'celular': { 'es': 'móvil', 'ar': 'celular', 'mx': 'celular', 'co': 'celular', 'cl': 'celular' },
-      'móvil': { 'es': 'móvil', 'ar': 'celular', 'mx': 'celular', 'co': 'celular', 'cl': 'celular' },
-      'estacionamiento': { 'es': 'aparcamiento', 'ar': 'estacionamiento', 'mx': 'estacionamiento', 'co': 'parqueadero', 'cl': 'estacionamiento' },
-      'apartamento': { 'es': 'piso', 'ar': 'departamento', 'mx': 'departamento', 'co': 'apartamento', 'cl': 'departamento' },
-      'rentar': { 'es': 'alquilar', 'ar': 'alquilar', 'mx': 'rentar', 'co': 'arrendar', 'cl': 'arrendar' }
-    };
-    
-    function applyRegionalVariant(text, region) {
-      if (region === 'neutral') return text;
-      
-      let newText = text;
-      for (const [word, variants] of Object.entries(REGIONAL_VARIANTS)) {
-        if (variants[region]) {
-          const regex = new RegExp('\\b' + word + '\\b', 'gi');
-          newText = newText.replace(regex, variants[region]);
-        }
-      }
-      return newText;
-    }
-    
-    // ============================================
-    // FEATURE 3: Smart Replace (Sinónimos)
-    // ============================================
-    async function loadSmartReplace(errorId, word) {
-      const container = document.getElementById(`smartReplace${errorId}`);
-      if (!container) return;
-      
-      // Mostrar loading
-      container.innerHTML = '<span style="font-size: 11px; color: #999;">Cargando...</span>';
-      
-      try {
-        // Llamar a API de sinónimos
-        const response = await fetch('/api/synonyms.js', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ word })
-        });
-        
-        const data = await response.json();
-        const synonyms = data.synonyms || [];
-        
-        if (synonyms.length === 0) {
-          container.innerHTML = '<span style="font-size: 11px; color: #999;">No hay sinónimos</span>';
-          return;
-        }
-        
-        // Renderizar sinónimos como chips minimalistas
-        container.innerHTML = synonyms.slice(0, 5).map(syn => 
-          `<span class="synonym-chip" onclick="replaceSynonym(${errorId}, '${escapeHtml(syn)}')">${escapeHtml(syn)}</span>`
-        ).join('');
-        
-      } catch (error) {
-        container.innerHTML = '<span style="font-size: 11px; color: #999;">Error al cargar</span>';
-      }
-    }
-    
-    function replaceSynonym(errorId, synonym) {
-      applySuggestion(errorId, synonym);
-    }
-    
-    // ============================================
-    // FEATURE 4: Traductor Integrado
-    // ============================================
-    async function translate(errorId, text, targetLang) {
-      const resultContainer = document.getElementById(`translation${errorId}`);
-      if (!resultContainer) return;
-      
-      // Mostrar loading
-      resultContainer.textContent = 'Traduciendo...';
-      resultContainer.classList.add('visible');
-      
-      try {
-        // Llamar a API de traducción
-        const response = await fetch('/api/translate.js', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            text: text,
-            source_lang: 'es',
-            target_lang: targetLang
-          })
-        });
-        
-        const data = await response.json();
-        const translation = data.translatedText || data.translation || text;
-        
-        // Mostrar traducción
-        resultContainer.textContent = translation;
-        
-      } catch (error) {
-        resultContainer.textContent = 'Error al traducir';
-        setTimeout(() => {
-          resultContainer.classList.remove('visible');
-        }, 2000);
-      }
-    }
-    
-    // Event listeners para botones de tono
-    document.querySelectorAll('.tone-btn').forEach(btn => {
-      btn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        const action = this.getAttribute('data-action');
-        
-        if (action === 'formal' || action === 'informal') {
-          unifyTone(action);
-        } else if (action === 'dismiss') {
-          document.getElementById('toneDetector').style.display = 'none';
-        }
-      });
-    });
-    
     // Toggle entre modo normal y modo corrección
     function toggleCorrectionMode(isCorrectionMode) {
-      const correctionPanel = document.getElementById('correctionPanel');
-      
       if (isCorrectionMode) {
         // Copiar texto del textarea al div editable
         const text = input.value;
         inputTextCorrectable.textContent = text;
         input.style.display = 'none';
         inputTextCorrectable.style.display = 'block';
-        
-        // Mostrar panel de correcciones
-        if (correctionPanel) {
-          correctionPanel.style.display = 'flex';
-        }
         
         // Iniciar chequeo
         checkCorrections();
@@ -3638,15 +3218,9 @@
         inputTextCorrectable.style.display = 'none';
         input.style.display = 'block';
         
-        // Ocultar panel de correcciones
-        if (correctionPanel) {
-          correctionPanel.style.display = 'none';
-        }
-        
         // Limpiar correcciones
         corrections = [];
         activeErrorId = null;
-        inputTextCorrectable.classList.remove('dimmed-text');
       }
     }
     
@@ -3676,12 +3250,6 @@
       if (editorPanel) {
         editorPanel.classList.add('correction-mode');
         toggleCorrectionMode(true);
-      }
-    } else {
-      // Si no es modo corrección, ocultar el panel
-      const correctionPanel = document.getElementById('correctionPanel');
-      if (correctionPanel) {
-        correctionPanel.style.display = 'none';
       }
     }
 
