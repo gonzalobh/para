@@ -1163,17 +1163,26 @@
       box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
     }
     
+    /* Wrapper del header con botones */
+    .quillbot-card-header-wrapper {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+      gap: 12px;
+    }
+    
+    /* Reducir margin cuando está colapsada */
+    .quillbot-card:not(.expanded) .quillbot-card-header-wrapper {
+      margin-bottom: 8px;
+    }
+    
     .quillbot-card-header {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 12px;
       cursor: pointer;  /* Clickeable */
-    }
-    
-    /* Reducir margin cuando está colapsada */
-    .quillbot-card:not(.expanded) .quillbot-card-header {
-      margin-bottom: 8px;
+      flex: 1;
     }
     
     .quillbot-error-icon {
@@ -1188,23 +1197,41 @@
       font-weight: 500;
     }
     
-    .quillbot-help-btn {
-      width: 18px;
-      height: 18px;
-      border-radius: 50%;
-      border: 1px solid #dadce0;
-      background: #fff;
-      color: #5f6368;
-      font-size: 11px;
-      font-weight: 600;
+    /* Botones en el header */
+    .quillbot-header-actions {
       display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
+      gap: 6px;
     }
     
-    .quillbot-help-btn:hover {
+    .quillbot-header-btn {
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: 1px solid;
+      white-space: nowrap;
+    }
+    
+    .quillbot-header-accept {
+      background: #1e8e3e;
+      color: #fff;
+      border-color: #1e8e3e;
+    }
+    
+    .quillbot-header-accept:hover {
+      background: #188038;
+      border-color: #188038;
+    }
+    
+    .quillbot-header-discard {
+      background: #fff;
+      color: #5f6368;
+      border-color: #dadce0;
+    }
+    
+    .quillbot-header-discard:hover {
       background: #f8f9fa;
       border-color: #5f6368;
     }
@@ -2860,7 +2887,7 @@
         errorSpan.addEventListener('click', (e) => {
           e.preventDefault();
           const errorId = parseInt(errorSpan.dataset.errorId);
-          highlightError(errorId);
+          scrollToAndExpandCard(errorId);
         });
       });
     }
@@ -3002,10 +3029,19 @@
         
         return `
           <div class="quillbot-card" data-error-id="${error.id}">
-            <div class="quillbot-card-header" data-action="toggle">
-              <span class="quillbot-error-icon">●</span>
-              <span class="quillbot-error-title">${escapeHtml(errorTitle)}</span>
-              <button class="quillbot-help-btn" title="Más información">?</button>
+            <div class="quillbot-card-header-wrapper">
+              <div class="quillbot-card-header" data-action="toggle">
+                <span class="quillbot-error-icon">●</span>
+                <span class="quillbot-error-title">${escapeHtml(errorTitle)}</span>
+              </div>
+              <div class="quillbot-header-actions">
+                <button class="quillbot-header-btn quillbot-header-accept" data-action="accept-header" title="Aceptar corrección">
+                  Aceptar
+                </button>
+                <button class="quillbot-header-btn quillbot-header-discard" data-action="discard-header" title="Descartar corrección">
+                  Descartar
+                </button>
+              </div>
             </div>
             
             <!-- Vista compacta (visible por defecto) -->
@@ -3037,37 +3073,36 @@
       correctionList.querySelectorAll('.quillbot-card').forEach(card => {
         const errorId = parseInt(card.dataset.errorId);
         
-        // Toggle para expandir/colapsar
+        // Toggle para expandir/colapsar (solo en el título, no en los botones)
         const header = card.querySelector('[data-action="toggle"]');
         if (header) {
           header.addEventListener('click', (e) => {
-            // No hacer nada si se clickea el botón "?"
-            if (e.target.classList.contains('quillbot-help-btn')) {
-              return;
-            }
-            
-            // Toggle expanded class
-            card.classList.toggle('expanded');
-            
-            // Mostrar/ocultar elementos
-            const compactView = card.querySelector('.quillbot-compact-view');
-            const cardBody = card.querySelector('.quillbot-card-body');
-            const cardActions = card.querySelector('.quillbot-card-actions');
-            
-            if (card.classList.contains('expanded')) {
-              // Expandir
-              if (compactView) compactView.style.display = 'none';
-              if (cardBody) cardBody.style.display = 'block';
-              if (cardActions) cardActions.style.display = 'flex';
-            } else {
-              // Colapsar
-              if (compactView) compactView.style.display = 'block';
-              if (cardBody) cardBody.style.display = 'none';
-              if (cardActions) cardActions.style.display = 'none';
+            toggleCard(card);
+          });
+        }
+        
+        // Botón "Aceptar" en el header
+        const acceptHeaderBtn = card.querySelector('[data-action="accept-header"]');
+        if (acceptHeaderBtn) {
+          acceptHeaderBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const error = corrections.find(c => c.id === errorId);
+            if (error) {
+              applySuggestion(errorId, error.suggestion);
             }
           });
         }
         
+        // Botón "Descartar" en el header
+        const discardHeaderBtn = card.querySelector('[data-action="discard-header"]');
+        if (discardHeaderBtn) {
+          discardHeaderBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            ignoreError(errorId);
+          });
+        }
+        
+        // Botón "Accept" en el body (cuando está expandido)
         const acceptBtn = card.querySelector('[data-action="accept"]');
         if (acceptBtn) {
           acceptBtn.addEventListener('click', (e) => {
@@ -3079,6 +3114,7 @@
           });
         }
         
+        // Botón "Ignore" en el body (cuando está expandido)
         const ignoreBtn = card.querySelector('[data-action="ignore"]');
         if (ignoreBtn) {
           ignoreBtn.addEventListener('click', (e) => {
@@ -3087,6 +3123,53 @@
           });
         }
       });
+    }
+    
+    // Función para expandir/colapsar una tarjeta
+    function toggleCard(card) {
+      // Toggle expanded class
+      card.classList.toggle('expanded');
+      
+      // Mostrar/ocultar elementos
+      const compactView = card.querySelector('.quillbot-compact-view');
+      const cardBody = card.querySelector('.quillbot-card-body');
+      const cardActions = card.querySelector('.quillbot-card-actions');
+      
+      if (card.classList.contains('expanded')) {
+        // Expandir
+        if (compactView) compactView.style.display = 'none';
+        if (cardBody) cardBody.style.display = 'block';
+        if (cardActions) cardActions.style.display = 'flex';
+      } else {
+        // Colapsar
+        if (compactView) compactView.style.display = 'block';
+        if (cardBody) cardBody.style.display = 'none';
+        if (cardActions) cardActions.style.display = 'none';
+      }
+    }
+    
+    // Función para hacer scroll y expandir una tarjeta desde el error subrayado
+    function scrollToAndExpandCard(errorId) {
+      const card = document.querySelector(`.quillbot-card[data-error-id="${errorId}"]`);
+      if (!card) return;
+      
+      // Expandir la tarjeta si no está expandida
+      if (!card.classList.contains('expanded')) {
+        toggleCard(card);
+      }
+      
+      // Hacer scroll suave hasta la tarjeta
+      card.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'nearest',
+        inline: 'nearest'
+      });
+      
+      // Agregar un highlight temporal
+      card.style.backgroundColor = '#fff9e6';
+      setTimeout(() => {
+        card.style.backgroundColor = '';
+      }, 1500);
     }
     
     // Función para obtener el contexto de un error (oración completa con palabra tachada y corrección)
