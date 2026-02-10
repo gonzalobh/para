@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>para v3 — Corrector</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, system-ui, -apple-system, sans-serif;
+      background: #f6f7f9;
+      color: #111;
+    }
+    .app {
+      max-width: 1180px;
+      margin: 0 auto;
+      min-height: 100vh;
+      padding: 24px;
+      display: grid;
+      gap: 14px;
+    }
+    .card {
+      background: #fff;
+      border: 1px solid #e8eaed;
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,.04);
+    }
+    .header {
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    h1 { margin: 0; font-size: 22px; }
+    .sub { margin: 4px 0 0; color: #5f6368; font-size: 13px; }
+    .main {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 14px;
+    }
+    .editor { padding: 14px; display: grid; gap: 10px; }
+    textarea {
+      width: 100%;
+      min-height: min(72vh, 760px);
+      resize: vertical;
+      border: 1px solid #dfe3e8;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 16px;
+      line-height: 1.6;
+      font-family: inherit;
+      outline: none;
+    }
+    textarea:focus { border-color: #0b57d0; box-shadow: 0 0 0 4px rgba(11,87,208,.08); }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+    button {
+      border: 1px solid #dadce0;
+      background: #fff;
+      color: #111;
+      border-radius: 999px;
+      padding: 8px 13px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    button.primary { background: #111; color: #fff; border-color: #111; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    .status { font-size: 12px; color: #5f6368; min-height: 18px; }
+
+    .panel { display: grid; grid-template-rows: auto auto 1fr; min-height: 0; }
+    .panel-head { padding: 14px; border-bottom: 1px solid #f0f0f0; }
+    .panel-title { margin: 0; font-size: 14px; color: #202124; }
+    .count { font-size: 24px; font-weight: 700; margin-top: 2px; }
+    .list { padding: 10px; overflow: auto; max-height: calc(100vh - 180px); display: grid; gap: 8px; }
+    .item {
+      border: 1px solid #eceff1;
+      border-radius: 10px;
+      padding: 10px;
+      display: grid;
+      gap: 8px;
+      background: #fff;
+    }
+    .bad { color: #d93025; text-decoration: line-through; }
+    .good { color: #188038; font-weight: 600; }
+    .item-actions { display: flex; gap: 6px; }
+    .empty { color: #5f6368; font-size: 13px; padding: 8px; }
+
+    @media (max-width: 960px) {
+      .main { grid-template-columns: 1fr; }
+      .list { max-height: 320px; }
+      textarea { min-height: 48vh; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <section class="card header">
+      <div>
+        <h1>Corrector</h1>
+        <p class="sub">Modo único de corrección ortográfica y gramatical.</p>
+      </div>
+    </section>
+
+    <section class="main">
+      <article class="card editor">
+        <div class="toolbar">
+          <button id="checkNow" class="primary" type="button">Revisar ahora</button>
+          <button id="applyAll" type="button" disabled>Aceptar todas</button>
+        </div>
+        <div id="status" class="status">Escribe para iniciar la corrección automática.</div>
+        <textarea id="inputText" placeholder="Pega o escribe texto aquí..."></textarea>
+      </article>
+
+      <aside class="card panel">
+        <div class="panel-head">
+          <p class="panel-title">Sugerencias</p>
+          <div id="errorCount" class="count">0</div>
+        </div>
+        <div class="toolbar" style="padding: 10px 14px;">
+          <button id="clearErrors" type="button">Limpiar lista</button>
+        </div>
+        <div id="errorList" class="list">
+          <p class="empty">Sin errores detectados.</p>
+        </div>
+      </aside>
+    </section>
+  </div>
+
+  <script>
+    const inputText = document.getElementById('inputText');
+    const checkNowBtn = document.getElementById('checkNow');
+    const applyAllBtn = document.getElementById('applyAll');
+    const clearErrorsBtn = document.getElementById('clearErrors');
+    const statusEl = document.getElementById('status');
+    const errorCountEl = document.getElementById('errorCount');
+    const errorListEl = document.getElementById('errorList');
+
+    let errors = [];
+    let debounceId = null;
+    let activeController = null;
+    let requestNonce = 0;
+
+    function setStatus(text) { statusEl.textContent = text; }
+
+    function renderErrors() {
+      errorCountEl.textContent = String(errors.length);
+      applyAllBtn.disabled = errors.length === 0;
+
+      if (!errors.length) {
+        errorListEl.innerHTML = '<p class="empty">Sin errores detectados.</p>';
+        return;
+      }
+
+      errorListEl.innerHTML = errors.map((error, idx) => {
+        const bad = escapeHtml(error.errorText || '');
+        const good = escapeHtml(error.suggestion || '');
+        return `
+          <article class="item" data-index="${idx}">
+            <div><span class="bad">${bad}</span> → <span class="good">${good || '(sin sugerencia)'}</span></div>
+            <div class="item-actions">
+              <button type="button" data-action="apply" data-index="${idx}" ${good ? '' : 'disabled'}>Aplicar</button>
+              <button type="button" data-action="ignore" data-index="${idx}">Ignorar</button>
+            </div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function escapeHtml(str) {
+      return str
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function normalizeErrors(raw) {
+      if (!Array.isArray(raw)) return [];
+      return raw
+        .filter(e => Number.isInteger(e.start) && Number.isInteger(e.end) && e.end > e.start)
+        .sort((a, b) => a.start - b.start);
+    }
+
+    function applySingleError(error) {
+      if (!error || !error.suggestion) return;
+      const current = inputText.value;
+      if (error.start < 0 || error.end > current.length || error.end <= error.start) return;
+      inputText.value = current.slice(0, error.start) + error.suggestion + current.slice(error.end);
+    }
+
+    function applyAllErrors() {
+      if (!errors.length) return;
+      let next = inputText.value;
+      [...errors]
+        .filter(e => e.suggestion)
+        .sort((a, b) => b.start - a.start)
+        .forEach((error) => {
+          if (error.start < 0 || error.end > next.length || error.end <= error.start) return;
+          next = next.slice(0, error.start) + error.suggestion + next.slice(error.end);
+        });
+      inputText.value = next;
+      errors = [];
+      renderErrors();
+      scheduleCorrection(120);
+    }
+
+    async function requestCorrection(text) {
+      if (activeController) activeController.abort();
+      activeController = new AbortController();
+      const nonce = ++requestNonce;
+
+      setStatus('Analizando texto...');
+      checkNowBtn.disabled = true;
+
+      try {
+        const response = await fetch('/api/correct', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text }),
+          signal: activeController.signal
+        });
+
+        if (!response.ok) throw new Error('No se pudo analizar');
+
+        const contentType = response.headers.get('content-type') || '';
+
+        if (contentType.includes('text/event-stream') && response.body) {
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            const events = buffer.split('\n\n');
+            buffer = events.pop() || '';
+
+            for (const event of events) {
+              const dataLine = event.split('\n').find(line => line.startsWith('data: '));
+              if (!dataLine) continue;
+
+              const payload = JSON.parse(dataLine.slice(6));
+              if (payload.type === 'result') {
+                if (nonce !== requestNonce) return;
+                errors = normalizeErrors(payload.errors);
+                renderErrors();
+                setStatus(errors.length ? `Se detectaron ${errors.length} posibles correcciones.` : 'Sin errores detectados.');
+              }
+            }
+          }
+        } else {
+          const data = await response.json();
+          if (nonce !== requestNonce) return;
+          errors = normalizeErrors(data.errors || []);
+          renderErrors();
+          setStatus(errors.length ? `Se detectaron ${errors.length} posibles correcciones.` : 'Sin errores detectados.');
+        }
+      } catch (error) {
+        if (error.name === 'AbortError') return;
+        setStatus('Error al analizar. Intenta nuevamente.');
+      } finally {
+        if (nonce === requestNonce) {
+          checkNowBtn.disabled = false;
+        }
+      }
+    }
+
+    function scheduleCorrection(delay = 420) {
+      clearTimeout(debounceId);
+      const text = inputText.value.trim();
+      if (!text) {
+        errors = [];
+        renderErrors();
+        setStatus('Escribe para iniciar la corrección automática.');
+        return;
+      }
+      debounceId = setTimeout(() => requestCorrection(text), delay);
+    }
+
+    inputText.addEventListener('input', () => scheduleCorrection());
+
+    checkNowBtn.addEventListener('click', () => {
+      const text = inputText.value.trim();
+      if (!text) return;
+      requestCorrection(text);
+    });
+
+    applyAllBtn.addEventListener('click', applyAllErrors);
+
+    clearErrorsBtn.addEventListener('click', () => {
+      errors = [];
+      renderErrors();
+      setStatus('Lista limpiada.');
+    });
+
+    errorListEl.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+      const index = Number(button.dataset.index);
+      const targetError = errors[index];
+      if (!targetError) return;
+
+      if (button.dataset.action === 'apply') {
+        applySingleError(targetError);
+      }
+
+      errors.splice(index, 1);
+      renderErrors();
+      scheduleCorrection(120);
+    });
+
+    renderErrors();
+  </script>
+</body>
+</html>
