@@ -2615,13 +2615,39 @@
     let correctionIdCounter = 0;
     let activeErrorId = null;
     const inputTextCorrectable = document.getElementById('inputTextCorrectable');
-    
+    const cache = new Map();
+    let activeCorrectionController = null;
+
     function debounce(fn, ms){
       let t;
       return (...args)=>{
         clearTimeout(t);
         t = setTimeout(()=>fn(...args), ms);
       }
+    }
+
+    function hashText(text) {
+      let hash = 5381;
+      for (let i = 0; i < text.length; i++) {
+        hash = ((hash << 5) + hash) + text.charCodeAt(i);
+        hash |= 0;
+      }
+      return String(hash);
+    }
+
+    function setCorrectionProgress(message = '') {
+      const correctionList = document.getElementById('correctionList');
+      if (!correctionList) return;
+
+      if (!message) {
+        toggleStatus.textContent = '';
+        syncStatusVisibility();
+        return;
+      }
+
+      toggleStatus.textContent = message;
+      syncStatusVisibility();
+      correctionList.innerHTML = `<div class="no-corrections"><div class="no-corrections-icon">⏳</div><div>${escapeHtml(message)}</div></div>`;
     }
 
     function normalizeCorrectionErrors(errors) {
@@ -2653,32 +2679,100 @@
       });
 
       corrections = detectedErrors;
+      toggleStatus.textContent = '';
+      syncStatusVisibility();
       renderCorrectionsList();
     }
 
     async function runCorrection() {
       const sourceInput = inputTextCorrectable?.style.display !== 'none' ? inputTextCorrectable : input;
       const text = sourceInput?.value || '';
+      const trimmedText = text.trim();
 
-      console.log('[correction] runCorrection() ejecutándose');
+      if (trimmedText.length < 20) {
+        if (activeCorrectionController) {
+          activeCorrectionController.abort();
+          activeCorrectionController = null;
+        }
+        corrections = [];
+        toggleStatus.textContent = '';
+        syncStatusVisibility();
+        renderCorrectionsList();
+        return;
+      }
+
+      const textHash = hashText(trimmedText);
+      if (cache.has(textHash)) {
+        renderErrors(cache.get(textHash));
+        return;
+      }
+
+      if (activeCorrectionController) {
+        activeCorrectionController.abort();
+      }
+
+      activeCorrectionController = new AbortController();
+      console.time('correction');
+      setCorrectionProgress('Detectando errores...');
 
       try {
         const response = await fetch('/api/correct', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, language: 'es' })
+          body: JSON.stringify({ text: trimmedText, language: 'es' }),
+          signal: activeCorrectionController.signal
         });
 
-        if (!response.ok) {
+        if (!response.ok || !response.body) {
           console.error('[correction] Error en /api/correct:', response.status);
+          setCorrectionProgress('No se pudo analizar el texto');
           return;
         }
 
-        const data = await response.json();
-        console.log('Correction result:', data);
-        renderErrors(data.errors || []);
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const events = buffer.split('\n\n');
+          buffer = events.pop() || '';
+
+          for (const eventBlock of events) {
+            const dataLine = eventBlock.split('\n').find(line => line.startsWith('data: '));
+            if (!dataLine) continue;
+
+            try {
+              const payload = JSON.parse(dataLine.slice(6));
+
+              if (payload.type === 'status' || payload.type === 'progress') {
+                setCorrectionProgress(payload.message || 'Analizando texto...');
+              }
+
+              if (payload.type === 'result') {
+                const errors = payload.errors || [];
+                cache.set(textHash, errors);
+                renderErrors(errors);
+              }
+            } catch (parseError) {
+              console.error('[correction] Error parseando stream:', parseError);
+            }
+          }
+        }
       } catch (error) {
-        console.error('[correction] Error ejecutando runCorrection():', error);
+        if (error?.name !== 'AbortError') {
+          console.error('[correction] Error ejecutando runCorrection():', error);
+          setCorrectionProgress('No se pudo analizar el texto');
+        }
+      } finally {
+        console.timeEnd('correction');
+        if (activeCorrectionController?.signal?.aborted) {
+          setCorrectionProgress('');
+        }
+        activeCorrectionController = null;
       }
     }
     
@@ -3555,7 +3649,7 @@
     document.addEventListener('DOMContentLoaded', () => {
       const correctionHandler = debounce(() => {
         runCorrection();
-      }, 600);
+      }, 1200);
 
       if (input) {
         input.addEventListener('input', correctionHandler);
