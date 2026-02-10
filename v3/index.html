@@ -2,9 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8" />
-  <title>Corrector test</title>
-  <script src="./correccion.js"></script>
-
+  <title>Corrector (test simple)</title>
   <style>
     body {
       font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
@@ -30,10 +28,6 @@
     ul {
       margin-top: 20px;
     }
-
-    li {
-      margin-bottom: 8px;
-    }
   </style>
 </head>
 <body>
@@ -46,6 +40,8 @@
 
   <ul id="errores"></ul>
 
-  <script src="correccion.js"></script>
+  <!-- IMPORTANTE: defer -->
+  <script src="./correccion.js" defer></script>
 </body>
 </html>
+
